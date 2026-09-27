@@ -1,0 +1,193 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BMS Election Admin v10</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script><style>@media print{body{background:#fff!important}.wrap>*,#login,#verifyModal,#resultsActions,button,input,textarea,select{display:none!important}.wrap{max-width:none;padding:0}.results-printable{display:block!important;box-shadow:none!important;border:0!important;margin:0!important;padding:0!important}.results-printable h2{display:block!important}.results-chart{break-inside:avoid}.result-position{break-inside:avoid}}body{font-family:Arial;margin:0;background:#f5f7fb;color:#172033}.wrap{max-width:1100px;margin:auto;padding:22px}.card{background:#fff;border-radius:15px;padding:20px;margin:14px 0;box-shadow:0 4px 20px #0001}input,textarea,select{width:100%;box-sizing:border-box;padding:11px;margin:6px 0 12px;border:1px solid #ccd3df;border-radius:8px}button{background:#173b8f;color:#fff;border:0;border-radius:9px;padding:11px 16px;font-weight:700;margin:4px;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}.danger{color:#b42318}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:700px){.grid{grid-template-columns:1fr}}table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #eee;text-align:left}.status-pill{display:inline-block;padding:7px 12px;border-radius:999px;font-weight:800;text-transform:uppercase;font-size:12px;background:#eef2f7}.status-open{background:#e7f7ed;color:#087443}.status-closed{background:#fff3e0;color:#9a5b00}.status-published{background:#e9e7ff;color:#4338a8}.modal-backdrop{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:18px;z-index:50}.modal{background:#fff;width:min(460px,100%);border-radius:16px;padding:22px;box-shadow:0 15px 50px #0004}.modal h3{margin-top:0}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}</style></head><body><div class="wrap"><div class="card"><h1>BMS Election Admin</h1><p>Manage the 2026 Basic Medical Sciences Faculty Election.</p></div><section id="login" class="card"><h2>Admin Sign In</h2><input id="email" type="email" placeholder="Admin email"><input id="password" type="password" placeholder="Password"><button onclick="login()">Sign in</button><p id="lm"></p></section><main id="panel" style="display:none">
+<div class="card"><h2>Election Control</h2><p>Status: <span id="status" class="status-pill"></span></p><p id="statusHelp">Election is not open.</p><div><button id="openBtn" onclick="requestStatusChange('open')">Open Election</button><button id="closeBtn" onclick="requestStatusChange('closed')">Close Election</button><button id="resultsBtn" onclick="requestStatusChange('published')">Display Results</button><button id="cancelDisplayBtn" onclick="requestStatusChange('closed')" style="display:none">Cancel Display</button></div></div>
+<div class="card"><h2 class="danger">Danger Zone</h2><p>Reset this election to a clean setup. This removes all positions, candidates, voters, votes, voter sessions and audit logs for this election, then returns the election to Draft.</p><button class="danger" id="resetBtn" onclick="requestStatusChange('reset')">Reset Everything</button></div>
+<div class="grid">
+<section class="card" id="positionCard"><h2>Add Position</h2><p id="positionLockMsg" style="display:none" class="danger">Position management is locked because the election has started.</p><input id="pname" placeholder="e.g. President"><input id="porder" type="number" placeholder="Display order"><button onclick="addPosition()">Add Position</button></section>
+<section class="card" id="candidateCard"><h2>Add Candidate</h2><p id="candidateLockMsg" style="display:none" class="danger">Candidate management is locked because the election has started.</p><select id="cpos"></select><input id="cname" placeholder="Candidate full name"><input id="cdept" placeholder="Department"><input id="cmat" placeholder="Matric number (optional)"><textarea id="manifesto" placeholder="Manifesto (optional)"></textarea><label>Candidate photo</label><input id="photo" type="file" accept="image/*"><img id="preview" style="display:none;max-width:120px;border-radius:10px;margin:8px 0"><button onclick="addCandidate()">Upload & Add Candidate</button></section>
+</div>
+<section class="card results-printable"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">Election Results</h2><div id="resultsActions" style="display:none"><button onclick="downloadResultsPDF()">Download PDF</button><button onclick="printResults()">Print</button></div></div><div id="resultsSummary"><p>Results will appear here after the electoral chairman selects <b>Display Results</b>.</p></div></section>
+<section class="card"><h2>Manage Positions & Candidates</h2><div id="data"></div></section>
+<section class="card"><h2>Import Voters</h2><p>One voter per line: <b>matric_number,full_name,department,whatsapp_number</b> (WhatsApp number is optional until PIN delivery is configured)</p><textarea id="csv" rows="8" placeholder="BMS/2026/001,Jane Doe,Nursing Science,08012345678"></textarea><button onclick="importVoters()">Import Voters</button><p id="im"></p></section><section class="card"><h2>Voters &amp; Election PINs</h2><p id="voterCount">Loading voter list...</p><p>Each eligible voter can have one active permanent PIN. <b>Issue PIN</b> sends a new PIN privately by WhatsApp. <b>Replace PIN</b> immediately invalidates the previous PIN. The committee never sees the PIN itself.</p><div id="voterData"></div></section>
+<section class="card" id="archiveCard"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><h2 style="margin:0">Election History / Archives</h2><p>Previous completed election records are kept here after a reset.</p></div><button onclick="loadArchives()">Refresh History</button></div><div id="archiveList"><p>No archived elections loaded.</p></div></section>
+</main><div id="archiveModal" class="modal-backdrop"><div class="modal"><h3>Save Election Record</h3><p id="archiveMsg">Before resetting, the complete election record will be archived and downloaded as a PDF.</p><div class="modal-actions"><button onclick="cancelArchiveReset()">Cancel</button><button id="archiveContinueBtn" onclick="archiveAndReset()">Save PDF &amp; Reset</button></div></div></div><div id="verifyModal" class="modal-backdrop"><div class="modal"><h3 id="verifyTitle">Verify action</h3><p id="verifyQuestion"></p><label>Electoral Chairman Email</label><input id="verifyEmail" type="email" autocomplete="username" placeholder="Enter electoral chairman email"><label>Password</label><input id="verifyPassword" type="password" autocomplete="current-password" placeholder="Enter password"><p id="verifyMsg" class="danger"></p><div class="modal-actions"><button onclick="cancelVerification()">Cancel</button><button id="verifyYesBtn" disabled onclick="confirmStatusChange()">Verify &amp; Continue</button></div></div></div></div>
+<script>
+const SUPABASE_URL='https://dlzjnxhvcysknajtxhij.supabase.co',KEY='sb_publishable_xl4C_1obFH_6z-thh_eMBw_0M2RMHpu',ELECTION='024a7a81-13dc-4fb2-adff-4851a29e0084',BUCKET='candidate-photos';
+const db=supabase.createClient(SUPABASE_URL,KEY);
+let positions=[];
+async function login(){const em=document.getElementById('email'),pw=document.getElementById('password'),msg=document.getElementById('lm');msg.textContent='Signing in...';msg.className='';const {error}=await db.auth.signInWithPassword({email:em.value.trim(),password:pw.value});if(error){msg.className='danger';msg.textContent=error.message;return}await load()}
+async function load(){
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){
+    document.getElementById('lm').className='danger';
+    document.getElementById('lm').textContent='No active login session. Please log in again.';
+    return;
+  }
+  const {data:{user},error:ue}=await db.auth.getUser();
+  if(ue || !user){
+    document.getElementById('lm').className='danger';
+    document.getElementById('lm').textContent='Could not verify the signed-in account: '+(ue?.message||'unknown error');
+    return;
+  }
+  const {data:a,error:ae}=await db.rpc('check_admin',{p_election_id:ELECTION});
+  if(ae){
+    document.getElementById('lm').className='danger';
+    document.getElementById('lm').textContent='Admin verification error: '+ae.message;
+    return;
+  }
+  if(a!==true){
+    document.getElementById('lm').className='danger';
+    document.getElementById('lm').textContent='Signed in as '+user.email+' but the database did not authorize this account for this election. User ID: '+user.id;
+    return;
+  }
+  document.getElementById('login').style.display='none';
+  document.getElementById('panel').style.display='block';
+  refresh()
+}
+async function refresh(){const e=await db.from('elections').select('*').eq('id',ELECTION).single();if(e.error){alert('Could not load election status: '+e.error.message);return}updateStatusUI(e.data.status);const p=await db.from('positions').select('*').eq('election_id',ELECTION).order('display_order');positions=p.data||[];await loadVoters();cpos.innerHTML=positions.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');const c=positions.length?await db.from('candidates').select('*').in('position_id',positions.map(x=>x.id)).order('display_order'):({data:[]});render(positions,c.data||[]);if(e.data.status==='published')await loadResults();else clearResultsUI();await loadArchives()}
+function clearResultsUI(){window.latestResults=null;document.getElementById('resultsActions').style.display='none';document.getElementById('resultsSummary').innerHTML='<p>No current election results are displayed.</p>'}
+async function loadResults(){
+  const box=document.getElementById('resultsSummary');
+  box.innerHTML='<p>Loading results...</p>';
+  const {data,error}=await db.rpc('get_election_results',{p_election_id:ELECTION});
+  if(error){box.innerHTML='<p class="danger">Could not load results: '+esc(error.message)+'</p>';return}
+  if(!data||data.published!==true){document.getElementById('resultsActions').style.display='none';box.innerHTML='<p>Results have not been displayed yet.</p>';return}
+  document.getElementById('resultsActions').style.display='block';
+  window.latestResults=data;
+  let html=`<div class="grid"><div><b>Eligible to vote</b><div style="font-size:28px;font-weight:800">${data.eligible_voters}</div></div><div><b>People who voted</b><div style="font-size:28px;font-weight:800">${data.voted_voters}</div></div></div>`;
+  html+='<hr style="border:0;border-top:1px solid #eee;margin:18px 0">';
+  for(const p of (data.positions||[])){
+    const rows=[...(p.candidates||[]).map(c=>({name:c.candidate_name,votes:Number(c.votes)||0})),...(p.nil_votes>0||!(p.candidates||[]).length?[{name:'Nil',votes:Number(p.nil_votes)||0}]:[])];
+    const max=Math.max(1,...rows.map(r=>r.votes));
+    html+=`<div class="result-position results-chart" style="margin:22px 0"><h3>${esc(p.position_name)}</h3><div style="border:1px solid #e5e9f0;border-radius:10px;padding:12px">`;
+    for(const r of rows) html+=`<div style="margin:10px 0"><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px"><span>${esc(r.name)}</span><b>${r.votes} vote${r.votes===1?'':'s'}</b></div><div style="height:18px;background:#eef2f7;border-radius:5px;overflow:hidden"><div style="height:100%;width:${Math.round(r.votes/max*100)}%;background:#173b8f;border-radius:5px"></div></div></div>`;
+    html+='</div></div>';
+  }
+  box.innerHTML=html;
+}
+
+function printResults(){
+  if(!window.latestResults){alert('Results are not available yet.');return}
+  window.print();
+}
+function downloadResultsPDF(){
+  const data=window.latestResults;
+  if(!data){alert('Results are not available yet.');return}
+  if(!window.jspdf?.jsPDF){alert('PDF generator could not load. Please use Print and choose Save as PDF.');return}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const margin=15, pageW=210, contentW=pageW-margin*2;
+  let y=18;
+  const lineHeight=6;
+  const ensure=(needed=10)=>{if(y+needed>282){doc.addPage();y=18}};
+  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('BMS Faculty Election 2026',margin,y);y+=8;
+  doc.setFontSize(13);doc.text('Official Election Results',margin,y);y+=8;
+  doc.setFont('helvetica','normal');doc.setFontSize(10);
+  doc.text(`Eligible to vote: ${data.eligible_voters}`,margin,y);doc.text(`People who voted: ${data.voted_voters}`,margin+70,y);y+=9;
+  for(const p of (data.positions||[])){
+    const rows=[...(p.candidates||[]).map(c=>({name:c.candidate_name,votes:Number(c.votes)||0})),...(p.nil_votes>0||!(p.candidates||[]).length?[{name:'Nil',votes:Number(p.nil_votes)||0}]:[])];
+    ensure(22);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(String(p.position_name),margin,y);y+=7;
+    const max=Math.max(1,...rows.map(r=>r.votes));
+    for(const r of rows){
+      ensure(13);doc.setFont('helvetica','normal');doc.setFontSize(9);
+      const label=String(r.name); const shown=label.length>42?label.slice(0,39)+'...':label;
+      doc.text(shown,margin,y);doc.text(`${r.votes} vote${r.votes===1?'':'s'}`,margin+contentW,y,{align:'right'});y+=3;
+      const barMax=contentW-2, barW=Math.max(0,(r.votes/max)*barMax);
+      doc.setFillColor(235,239,246);doc.rect(margin,y,barMax,4,'F');
+      if(barW>0){doc.setFillColor(23,59,143);doc.rect(margin,y,barW,4,'F')}
+      y+=7;
+    }
+    y+=2;
+  }
+  doc.setFont('helvetica','normal');doc.setFontSize(8);ensure(8);doc.text('Aggregate results only. No voter identities or individual ballots are included.',margin,y);
+  doc.save('BMS-Faculty-Election-2026-Official-Results.pdf');
+}
+function updateStatusUI(s){document.getElementById('status').dataset.status=s;const locked=['open','closed','published'].includes(s);document.getElementById('positionCard').querySelectorAll('input,button').forEach(x=>x.disabled=locked);document.getElementById('candidateCard').querySelectorAll('input,textarea,select,button').forEach(x=>x.disabled=locked);document.getElementById('positionLockMsg').style.display=locked?'block':'none';document.getElementById('candidateLockMsg').style.display=locked?'block':'none';document.getElementById('data').classList.toggle('roster-locked',locked);const el=document.getElementById('status');el.textContent=s==='open'?'Election Open':s==='closed'?'Election Closed':s==='published'?'Results Displayed':'Election Not Open';el.className='status-pill '+(s==='open'?'status-open':s==='closed'?'status-closed':s==='published'?'status-published':'');document.getElementById('statusHelp').textContent=s==='open'?'Voting is currently open. Close the election before displaying results.':s==='closed'?'Voting is closed. The electoral chairman can display the results after verification.':s==='published'?'Voting is closed and results are currently displayed. You can cancel the display to hide them again.':'Election is not open. The electoral chairman must verify before opening it.';document.getElementById('openBtn').disabled=s==='open'||s==='published';document.getElementById('closeBtn').disabled=s!=='open';document.getElementById('resultsBtn').disabled=s!=='closed';document.getElementById('cancelDisplayBtn').style.display=s==='published'?'inline-block':'none';document.getElementById('cancelDisplayBtn').disabled=s!=='published';document.getElementById('resetBtn').disabled=s==='open'}
+function esc(x){return String(x??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]))}
+function render(ps,cs){const locked=['open','closed','published'].includes(document.getElementById('status').dataset.status);data.innerHTML=ps.map(p=>{const list=cs.filter(c=>c.position_id===p.id);return `<div class="card" style="box-shadow:none;border:1px solid #e5e9f0"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h3>${esc(p.name)}</h3><button class="danger roster-action" ${locked?'disabled':''} onclick="deletePosition('${p.id}')">Delete position</button></div>${list.length?list.map(c=>`<div style="display:flex;gap:12px;align-items:center;border-top:1px solid #eee;padding:12px 0"><img src="${esc(c.photo_url||'')}" onerror="this.style.display='none'" style="width:64px;height:64px;object-fit:cover;border-radius:10px"><div style="flex:1"><b>${esc(c.full_name)}</b><div>${esc(c.department)}${c.matric_number?' • '+esc(c.matric_number):''}</div><small>${esc(c.manifesto||'')}</small></div><button class="roster-action" ${locked?'disabled':''} onclick="editCandidate('${c.id}')">Edit</button><button class="danger roster-action" ${locked?'disabled':''} onclick="deleteCandidate('${c.id}')">Delete</button></div>`).join(''):'<p>No candidates yet.</p>'}</div>`}).join('')}
+let pendingStatus=null;let currentAdminUserId=null;
+function updateVerifyButton(){const b=document.getElementById('verifyYesBtn');b.disabled=!(document.getElementById('verifyEmail').value.trim()&&document.getElementById('verifyPassword').value)}
+async function requestStatusChange(s){pendingStatus=s;const labels={open:['Open Election','Are you sure you want to open the election? After verification, voting will become available to eligible voters.'],closed:[document.getElementById('status').textContent==='Results Displayed'?'Cancel Display':'Close Election',document.getElementById('status').textContent==='Results Displayed'?'Are you sure you want to cancel the display of the election results? The results will be hidden from students until you display them again.':'Are you sure you want to close the election? After verification, voting will stop.'],published:['Display Results','Are you sure you want to display the election results? After verification, the results will become publicly viewable.'],reset:['Reset Everything','The complete election record will first be archived and prepared as a PDF download. After the archive is saved, the live election data will be cleared and the election will return to Draft.']};document.getElementById('verifyTitle').textContent=labels[s][0];document.getElementById('verifyQuestion').textContent=labels[s][1];document.getElementById('verifyMsg').textContent='';document.getElementById('verifyEmail').value='';document.getElementById('verifyPassword').value='';document.getElementById('verifyYesBtn').disabled=true;document.getElementById('verifyModal').style.display='flex';setTimeout(()=>document.getElementById('verifyEmail').focus(),50)}
+document.getElementById('verifyEmail').addEventListener('input',updateVerifyButton);document.getElementById('verifyPassword').addEventListener('input',updateVerifyButton);
+function cancelVerification(){pendingStatus=null;document.getElementById('verifyPassword').value='';document.getElementById('verifyModal').style.display='none'}
+async function confirmStatusChange(){if(!pendingStatus)return;const action=pendingStatus,em=document.getElementById('verifyEmail').value.trim(),pw=document.getElementById('verifyPassword').value,msg=document.getElementById('verifyMsg'),btn=document.getElementById('verifyYesBtn');if(!em||!pw){msg.textContent='Email and password are required.';return}btn.disabled=true;msg.textContent='Verifying electoral chairman credentials...';const {data:before}=await db.auth.getUser();const expectedId=before?.user?.id;if(!expectedId){msg.textContent='Your admin session has expired. Please sign in again.';btn.disabled=false;return}if(em.toLowerCase()!==(before.user.email||'').toLowerCase()){msg.textContent='Verification failed. Enter the email address of the currently authorized electoral chairman account.';btn.disabled=false;return}const {data:authData,error:authError}=await db.auth.signInWithPassword({email:em,password:pw});if(authError||!authData?.user){msg.textContent='Verification failed. Check the electoral chairman email and password.';btn.disabled=false;return}if(authData.user.id!==expectedId){msg.textContent='Verification failed. The verified account does not match the current authorized admin session.';btn.disabled=false;return}const {data:isChair,error:chairError}=await db.rpc('check_chairman',{p_election_id:ELECTION});if(chairError||isChair!==true){msg.textContent='Verification failed. This account is not the electoral chairman for this election.';btn.disabled=false;return}if(action==='reset'){cancelVerification();document.getElementById('archiveModal').style.display='flex';return}msg.textContent='Verified. Applying change...';const {error}=await db.rpc('set_election_status',{p_election_id:ELECTION,p_status:action});if(error){msg.textContent='Could not change election status: '+error.message;btn.disabled=false;return}cancelVerification();await refresh()}
+function cancelArchiveReset(){document.getElementById('archiveModal').style.display='none'}
+async function archiveAndReset(){const b=document.getElementById('archiveContinueBtn'),m=document.getElementById('archiveMsg');b.disabled=true;m.textContent='Creating the complete election archive...';const {data,error}=await db.rpc('create_election_archive',{p_election_id:ELECTION});if(error||!data?.snapshot){m.textContent='Could not create the election archive: '+(error?.message||'No archive data returned.');b.disabled=false;return}try{downloadArchivePDF(data.snapshot);m.textContent='PDF download started. Clearing the live election now...';}catch(e){m.textContent='The PDF could not be generated, so the election was NOT reset. '+e.message;b.disabled=false;return}const {data:resetData,error:resetError}=await db.rpc('reset_election_data',{p_election_id:ELECTION});if(resetError){m.textContent='The archive was saved, but reset failed: '+resetError.message+' You can retry Reset Everything without losing the archive.';b.disabled=false;return}document.getElementById('archiveModal').style.display='none';b.disabled=false;await refresh();alert('Election archived and reset successfully. The complete PDF has been downloaded, and the previous election is available under Election History.')}
+function archiveRows(snapshot,key){return Array.isArray(snapshot?.[key])?snapshot[key]:[]}
+function safeDate(v){try{return v?new Date(v).toLocaleString():'—'}catch{return String(v||'—')}}
+function addPdfWrapped(doc,text,x,y,width,lineHeight=5){const lines=doc.splitTextToSize(String(text??''),width);for(const line of lines){if(y>282){doc.addPage();y=18}doc.text(line,x,y);y+=lineHeight}return y}
+function downloadArchivePDF(snapshot){if(!window.jspdf?.jsPDF)throw new Error('PDF generator could not load.');const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});const margin=12,width=210-margin*2;let y=17;const ensure=(n=8)=>{if(y+n>282){doc.addPage();y=17}};const heading=(t,size=13)=>{ensure(12);doc.setFont('helvetica','bold');doc.setFontSize(size);doc.text(String(t),margin,y);y+=7};const line=(t)=>{doc.setFont('helvetica','normal');doc.setFontSize(8.5);y=addPdfWrapped(doc,t,margin,y,width,4.5)};const e=snapshot?.election||{};doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text(e.name||'Election Archive',margin,y);y+=7;doc.setFontSize(11);doc.text('Complete Election Archive',margin,y);y+=8;doc.setFont('helvetica','normal');doc.setFontSize(8.5);line(`Faculty: ${e.faculty||'—'} | Institution: ${e.institution||'—'}`);line(`Status at archive: ${e.status||'—'} | Election started: ${safeDate(e.starts_at)} | Election ended: ${safeDate(e.ends_at)}`);line(`Archived: ${safeDate(snapshot?.archive_metadata?.archived_at)}`);heading('Electoral Committee');for(const a of archiveRows(snapshot,'admins'))line(`${a.email||a.user_id||'—'} | Role: ${a.role||'—'} | Added: ${safeDate(a.created_at)}`);heading('Positions');const positions=archiveRows(snapshot,'positions');for(const p of positions)line(`${p.display_order}. ${p.name} | Max selections: ${p.max_selections??'—'}`);heading('Candidates');const candidates=archiveRows(snapshot,'candidates');for(const c of candidates)line(`${c.full_name||'—'} | Position ID: ${c.position_id||'—'} | Department: ${c.department||'—'} | Matric: ${c.matric_number||'—'} | Manifesto: ${c.manifesto||'—'} | Photo: ${c.photo_url||'—'}`);heading('Voters');const voters=archiveRows(snapshot,'voters');for(const v of voters)line(`${v.full_name||'—'} | Matric: ${v.matric_number||'—'} | Department: ${v.department||'—'} | Eligible: ${v.eligible?'Yes':'No'} | Voted: ${v.has_voted?'Yes':'No'} | Added: ${safeDate(v.created_at)}`);heading('Individual Vote Records');const votes=archiveRows(snapshot,'votes');for(const v of votes)line(`${v.voter_name||'—'} (${v.voter_matric_number||'—'}) → ${v.position_name||'—'} → ${v.candidate_name||'Nil'} | Cast: ${safeDate(v.cast_at)}`);heading('Audit Log');const logs=archiveRows(snapshot,'audit_logs');for(const a of logs)line(`${safeDate(a.created_at)} | ${a.action||'—'} | ${a.entity_type||'—'} | Actor: ${a.actor_user_id||'—'} | Details: ${JSON.stringify(a.details||{})}`);heading('Election Summary');const byPos={};for(const v of votes){const k=v.position_name||v.position_id||'Unknown';byPos[k]??={};const n=v.candidate_name||'Nil';byPos[k][n]=(byPos[k][n]||0)+1}for(const [p,counts] of Object.entries(byPos)){line(p);for(const [n,c] of Object.entries(counts))line(`  ${n}: ${c} vote${c===1?'':'s'}`)}doc.setFontSize(7);ensure(10);doc.text('Archive contains the election record captured immediately before reset. Authentication token hashes are intentionally excluded from the PDF.',margin,y);doc.save(`BMS-Faculty-Election-Archive-${String(e.name||'Election').replace(/[^a-z0-9]+/gi,'-')}.pdf`)}
+async function loadArchives(){const {data,error}=await db.rpc('list_election_archives',{p_election_id:ELECTION});const box=document.getElementById('archiveList');if(error){box.innerHTML='<p class="danger">Could not load election history: '+esc(error.message)+'</p>';return}const rows=Array.isArray(data)?data:[];if(!rows.length){box.innerHTML='<p>No previous election archive has been created yet.</p>';return}box.innerHTML='<div style="overflow:auto"><table><thead><tr><th>Election</th><th>Archived</th><th>Actions</th></tr></thead><tbody>'+rows.map(a=>`<tr><td>${esc(a.election_name)}</td><td>${esc(safeDate(a.archived_at))}</td><td><button onclick="downloadStoredArchive('${a.id}')">Download PDF</button></td></tr>`).join('')+'</tbody></table></div>'}
+async function downloadStoredArchive(id){const {data,error}=await db.rpc('get_election_archive',{p_archive_id:id});if(error||!data){alert('Could not load archive: '+(error?.message||'Archive not found.'));return}try{downloadArchivePDF(data)}catch(e){alert(e.message)}}
+
+async function addPosition(){const name=pname.value.trim();if(!name)return alert('Enter a position name.');const {error}=await db.from('positions').insert({election_id:ELECTION,name,display_order:Number(porder.value)||0});if(error)alert(error.message);pname.value='';porder.value='';refresh()}
+async function deletePosition(id){if(!confirm('Delete this position and its candidates?'))return;const {error}=await db.from('positions').delete().eq('id',id);if(error)alert(error.message);refresh()}
+photo.onchange=()=>{const f=photo.files[0];if(!f){preview.style.display='none';return}preview.src=URL.createObjectURL(f);preview.style.display='block'};
+async function addCandidate(){const f=photo.files[0];const name=cname.value.trim(),dept=cdept.value.trim();if(!name||!dept||!cpos.value)return alert('Position, name and department are required.');let photoUrl=null;if(f){if(f.size>3*1024*1024)return alert('Photo must be 3MB or smaller.');const ext=(f.name.split('.').pop()||'jpg').toLowerCase();const path=`${ELECTION}/${crypto.randomUUID()}.${ext}`;const up=await db.storage.from(BUCKET).upload(path,f,{upsert:false,contentType:f.type});if(up.error)return alert(up.error.message);photoUrl=db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl}const {error}=await db.from('candidates').insert({position_id:cpos.value,full_name:name,department:dept,matric_number:cmat.value.trim()||null,manifesto:manifesto.value.trim()||null,photo_url:photoUrl});if(error)alert(error.message);else{cname.value='';cdept.value='';cmat.value='';manifesto.value='';photo.value='';preview.style.display='none';refresh()}}
+async function editCandidate(id){const {data:c}=await db.from('candidates').select('*').eq('id',id).single();if(!c)return;const name=prompt('Candidate full name:',c.full_name);if(name===null)return;const dept=prompt('Department:',c.department);if(dept===null)return;const mat=prompt('Matric number:',c.matric_number||'');if(mat===null)return;const man=prompt('Manifesto:',c.manifesto||'');if(man===null)return;const {error}=await db.from('candidates').update({full_name:name.trim(),department:dept.trim(),matric_number:mat.trim()||null,manifesto:man.trim()||null}).eq('id',id);if(error)alert(error.message);refresh()}
+async function deleteCandidate(id){if(!confirm('Delete this candidate?'))return;const {error}=await db.from('candidates').delete().eq('id',id);if(error)alert(error.message);refresh()}
+async function loadVoters(){
+  const box=document.getElementById('voterData'),count=document.getElementById('voterCount');
+  const {data,error}=await db.from('voters').select('id,full_name,matric_number,department,whatsapp_number,eligible,has_voted').eq('election_id',ELECTION).order('full_name');
+  if(error){count.textContent='Unable to load voters: '+error.message;box.innerHTML='';return}
+  const {data:pinRows,error:pinError}=await db.rpc('pin_status',{p_election_id:ELECTION});
+  if(pinError){count.textContent='Unable to load PIN status: '+pinError.message;box.innerHTML='';return}
+  const pinMap=new Map((pinRows||[]).map(x=>[x.voter_id,x]));
+  count.textContent=data.length+' voter'+(data.length===1?'':'s')+' uploaded';
+  if(!data.length){box.innerHTML='<p>No voter records found.</p>';return}
+  box.innerHTML='<div style="overflow:auto"><table><thead><tr><th>Name</th><th>Matric Number</th><th>Department</th><th>WhatsApp</th><th>Eligible</th><th>Voted</th><th>PIN</th><th>Actions</th></tr></thead><tbody>'+data.map(v=>{
+    const p=pinMap.get(v.id), issued=!!p?.pin_issued;
+    const phone=v.whatsapp_number||'';
+    const pinButton=v.eligible
+      ? `<button onclick="manageVoterPin('${v.id}','${esc(v.full_name)}',${issued})">${issued?'Replace PIN':'Issue PIN'}</button>`
+      : '<button disabled>PIN unavailable</button>';
+    return `<tr><td>${esc(v.full_name)}</td><td>${esc(v.matric_number)}</td><td>${esc(v.department||'')}</td><td>${phone?esc(phone):'<span class="danger">Not set</span>'}</td><td>${v.eligible?'Yes':'No'}</td><td>${v.has_voted?'Yes':'No'}</td><td>${issued?`<b>Issued ✓</b><br><small>v${p.pin_version||1}</small>`:'<span>Not issued</span>'}</td><td>${pinButton}<button onclick="editVoterWhatsApp('${v.id}','${esc(v.full_name)}','${esc(phone)}')">WhatsApp</button><button onclick="toggleEligibility('${v.id}',${v.eligible})">${v.eligible?'Make Ineligible':'Make Eligible'}</button><button class="danger" onclick="removeVoter('${v.id}','${esc(v.full_name)}')">Remove</button></td></tr>`;
+  }).join('')+'</tbody></table></div>';
+}
+async function manageVoterPin(id,name,alreadyIssued){
+  const action=alreadyIssued?'replace':'issue';
+  const verb=alreadyIssued?'replace the existing':'issue';
+  if(!confirm(`Are you sure you want to ${verb} the election PIN for ${name}?${alreadyIssued?' The current PIN will stop working immediately after the new PIN is delivered.':''}`))return;
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){alert('Your admin session has expired. Please sign in again.');return}
+  const {data,error}=await db.functions.invoke('issue-voter-pin',{body:{election_id:ELECTION,voter_id:id},headers:{Authorization:`Bearer ${session.access_token}`}});
+  if(error){alert('Could not '+action+' PIN: '+(error.message||'WhatsApp delivery is not configured yet.'));return}
+  if(data?.error){alert(data.error+(data.provider?'\n\nProvider: '+data.provider:''));return}
+  alert(`PIN ${alreadyIssued?'replaced':'issued'} successfully. It was sent privately to ${name} by WhatsApp. The PIN itself is not displayed here.`);
+  await loadVoters();
+}
+async function editVoterWhatsApp(id,name,current){
+  const value=prompt(`WhatsApp number for ${name}:\nUse Nigerian format such as 08012345678 or 2348012345678.`,current||'');
+  if(value===null)return;
+  const phone=value.trim();
+  if(phone && !/^(?:0|234)\d{10}$/.test(phone.replace(/\s|[-()]/g,''))){alert('Enter a valid Nigerian WhatsApp number, e.g. 08012345678 or 2348012345678.');return}
+  const {error}=await db.from('voters').update({whatsapp_number:phone||null}).eq('id',id).eq('election_id',ELECTION);
+  if(error){alert('Could not save WhatsApp number: '+error.message);return}
+  await loadVoters();
+}
+
+async function importVoters(){
+  const lines=csv.value.split(/\n/).map(x=>x.trim()).filter(Boolean),rows=[];
+  for(const l of lines){const a=l.split(',').map(x=>x.trim());if(a.length<3)continue;rows.push({election_id:ELECTION,matric_number:a[0],full_name:a[1],department:a[2],whatsapp_number:a[3]||null})}
+  if(!rows.length){im.textContent='No valid voter rows found.';return}
+  im.textContent='Importing...';
+  const {error}=await db.from('voters').upsert(rows,{onConflict:'election_id,matric_number'});
+  if(error){im.textContent='Import failed: '+error.message;return}
+  im.textContent=`Imported ${rows.length} voter record${rows.length===1?'':'s'}.`;
+  csv.value='';
+  await loadVoters();
+}
+async function toggleEligibility(id,current){
+  const next=!current;
+  const {error}=await db.from('voters').update({eligible:next}).eq('id',id).eq('election_id',ELECTION);
+  if(error){alert('Could not update voter: '+error.message);return}
+  await loadVoters();
+}
+async function removeVoter(id,name){
+  if(!confirm(`Remove ${name} from the voter list? This deletes the voter record for this election.`))return;
+  const {error}=await db.from('voters').delete().eq('id',id).eq('election_id',ELECTION);
+  if(error){alert('Could not remove voter: '+error.message);return}
+  await loadVoters();
+}
+
+db.auth.signOut().finally(()=>{document.getElementById('login').style.display='block';document.getElementById('panel').style.display='none';});
+</script></body></html>
