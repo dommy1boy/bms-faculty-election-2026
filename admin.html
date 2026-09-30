@@ -138,7 +138,7 @@ async function loadVoters(){
   renderVoterLists(document.getElementById('voterSearch')?.value||'');
 }
 function voterRow(v,pinMap){
-  const p=pinMap.get(v.id), issued=!!p?.pin_issued;
+  const p=pinMap.get(v.id), issued=Boolean(p && p.pin_issued === true && Number(p.pin_version) > 0);
   const email=v.email||'', phone=v.whatsapp_number||'';
   const pinButton=v.eligible ? `<button onclick="manageVoterPin('${v.id}','${esc(v.full_name)}',${issued})">${issued?'Replace PIN':'Issue PIN'}</button>` : '<button disabled>PIN unavailable</button>';
   return `<tr><td>${esc(v.full_name)}</td><td>${esc(v.matric_number)}</td><td>${esc(v.department||'')}</td><td>${email?esc(email):'<span class="danger">Not set</span>'}</td><td>${phone?esc(phone):'<span class="danger">Not set</span>'}</td><td>${v.eligible?'Yes':'No'}</td><td>${v.has_voted?'Yes':'No'}</td><td>${issued?`<b>Issued ✓</b><br><small>v${p.pin_version||1}</small>`:'<span>Not issued</span>'}</td><td>${pinButton}<button onclick="editVoterEmail('${v.id}','${esc(v.full_name)}','${esc(email)}')">Email</button><button onclick="editVoterWhatsApp('${v.id}','${esc(v.full_name)}','${esc(phone)}')">WhatsApp</button><button onclick="toggleEligibility('${v.id}',${v.eligible})">${v.eligible?'Make Ineligible':'Make Eligible'}</button><button class="danger" onclick="removeVoter('${v.id}','${esc(v.full_name)}')">Remove</button></td></tr>`;
@@ -157,6 +157,8 @@ function filterVoters(value){
   if(c)c.textContent=`Showing ${rows.length} of ${(window.allVoters||[]).length} voter${(window.allVoters||[]).length===1?'':'s'}`;
 }
 function renderVoterLists(q){filterVoters(q)}
+window.addEventListener('focus',()=>loadVoters());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadVoters()});
 function openVoterFullScreen(){
   const el=document.getElementById('voterFullScreen');
   el.classList.add('open');el.setAttribute('aria-hidden','false');
@@ -174,35 +176,60 @@ async function manageVoterPin(id,name,alreadyIssued){
   const action=alreadyIssued?'replace':'issue';
   const verb=alreadyIssued?'replace the existing':'issue';
   if(!confirm(`Are you sure you want to ${verb} the election PIN for ${name}?${alreadyIssued?' The current PIN will stop working immediately when the replacement is issued.':''}`))return;
-  const {data:{session}}=await db.auth.getSession();
-  if(!session){alert('Your admin session has expired. Please sign in again.');return}
-  const {data,error}=await db.functions.invoke('issue-voter-pin',{body:{election_id:ELECTION,voter_id:id},headers:{Authorization:`Bearer ${session.access_token}`}});
-  if(error){alert('Could not '+action+' PIN: '+(error.message||'PIN generation failed.'));return}
-  if(data?.error){alert(data.error);return}
-  const email=String(data?.email||'').trim();
-  const pin=String(data?.pin||'').trim();
-  const fullName=String(data?.full_name||name||'').trim();
-  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){alert('The voter PIN was not issued because the voter does not have a valid email address.');return}
-  if(!/^\d{6}$/.test(pin)){alert('The PIN was issued but could not be prepared for email. Contact the election administrator.');return}
-  const subject='BMS Faculty Election 2026 — Your Election PIN';
-  const body=[
-    `Hello ${fullName},`,
-    '',
-    'This is your personal password/PIN for the BMS Faculty Election 2026.',
-    '',
-    `Your Election PIN: ${pin}`,
-    '',
-    'Please keep this PIN safe and do not share it with anyone. You will need it to access the voting portal.',
-    '',
-    'Signed,',
-    'Electoral Chairman',
-    'BMS Faculty Electoral Committee',
-    'Basic Medical Sciences, University of Delta, Agbor'
-  ].join('\n');
-  const gmailUrl='https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(email)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-  window.open(gmailUrl,'_blank','noopener');
-  alert(`PIN ${alreadyIssued?'replaced':'issued'} successfully. Gmail has been opened with the message prepared for ${fullName}. Check that the BMS account (bmsunidel@gmail.com) is the sending account, then click Send.`);
-  await loadVoters();
+
+  const button=document.querySelector(`[onclick*="manageVoterPin('${id}'"]`);
+  const originalText=button?.textContent;
+  if(button){button.disabled=true;button.textContent='Preparing PIN...'}
+
+  try{
+    const {data:{session}}=await db.auth.getSession();
+    if(!session){alert('Your admin session has expired. Please sign in again.');return}
+
+    const {data,error}=await db.functions.invoke('issue-voter-pin',{
+      body:{election_id:ELECTION,voter_id:id},
+      headers:{Authorization:`Bearer ${session.access_token}`}
+    });
+    if(error){alert('Could not '+action+' PIN: '+(error.message||'PIN generation failed.'));return}
+    if(data?.error){alert(data.error);return}
+
+    const email=String(data?.email||'').trim();
+    const pin=String(data?.pin||'').trim();
+    const fullName=String(data?.full_name||name||'').trim();
+    if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      alert('The voter PIN was not issued because the voter does not have a valid email address.');return
+    }
+    if(!/^\d{6}$/.test(pin)){
+      alert('The PIN was issued but could not be prepared for email. Contact the election administrator.');return
+    }
+
+    const subject='BMS Faculty Election 2026 — Your Election PIN';
+    const body=[
+      `Hello ${fullName},`,
+      '',
+      'This is your personal password/PIN for the BMS Faculty Election 2026.',
+      '',
+      `Your Election PIN: ${pin}`,
+      '',
+      'Please keep this PIN safe and do not share it with anyone. You will need it to access the voting portal.',
+      '',
+      'Signed,',
+      'Electoral Chairman',
+      'BMS Faculty Electoral Committee',
+      'Basic Medical Sciences, University of Delta, Agbor'
+    ].join('\n');
+
+    // Use the Android email-app handoff rather than forcing Gmail's website.
+    // The system can then route the compose request to the installed Gmail app.
+    const mailto='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    window.location.href=mailto;
+
+    setTimeout(()=>{
+      alert(`PIN ${alreadyIssued?'replaced':'issued'} successfully. Your phone should now open the email app with the recipient, subject and PIN message prepared. Review it and tap Send.`);
+    },350);
+    await loadVoters();
+  }finally{
+    if(button){button.disabled=false;button.textContent=originalText||'Issue PIN'}
+  }
 }
 async function editVoterEmail(id,name,current){
   const value=prompt(`Email address for ${name}:`,current||'');
