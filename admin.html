@@ -192,13 +192,15 @@ async function manageVoterPin(id,name,alreadyIssued){
 
   await loadVoters();
 
+  // Android: ask the Gmail app itself to compose the message.
+  // This targets Gmail's Android package instead of opening gmail.com in a browser.
+  const intentUrl='intent://compose?to='+encodeURIComponent(email)+'&subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body)+'#Intent;scheme=mailto;package=com.google.android.gm;end';
   const mailto='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-  const link=document.createElement('a');
-  link.href=mailto;
-  link.style.display='none';
-  document.body.appendChild(link);
-  link.click();
-  setTimeout(()=>link.remove(),1000);
+
+  // Use the Android Gmail intent first. If the browser/device refuses intent://,
+  // fall back to the normal mailto handoff (which can open the installed Gmail app).
+  window.location.href=intentUrl;
+  setTimeout(()=>{ window.location.href=mailto; },1500);
 }
 
 async function editVoterEmail(id,name,current){
