@@ -173,23 +173,34 @@ function closeVoterFullScreen(){
 async function manageVoterPin(id,name,alreadyIssued){
   const action=alreadyIssued?'replace':'issue';
   const verb=alreadyIssued?'replace the existing':'issue';
-  if(!confirm(`Are you sure you want to ${verb} the election PIN for ${name}?${alreadyIssued?' The current PIN will stop working immediately after the new PIN is delivered.':''}`))return;
+  if(!confirm(`Are you sure you want to ${verb} the election PIN for ${name}?${alreadyIssued?' The current PIN will stop working immediately after the new PIN is generated.':''}`))return;
   const {data:{session}}=await db.auth.getSession();
   if(!session){alert('Your admin session has expired. Please sign in again.');return}
+
   const {data,error}=await db.functions.invoke('issue-voter-pin',{body:{election_id:ELECTION,voter_id:id},headers:{Authorization:`Bearer ${session.access_token}`}});
-  if(error){alert('Could not '+action+' PIN: '+(error.message||'Email delivery failed.'));return}
-  if(data?.error){alert(data.error+(data.provider?'\n\nProvider: '+data.provider:''));return}
-  const recipient=String(data.email||'').trim();
-  const fullName=String(data.full_name||name||'').trim();
-  const pin=String(data.pin||'').trim();
-  if(!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)){alert('PIN was issued, but this voter does not have a valid email address.');await loadVoters();return}
-  if(!/^\d{6}$/.test(pin)){alert('PIN was issued, but the generated PIN could not be prepared for email.');await loadVoters();return}
-  await loadVoters();
+  if(error){alert('Could not '+action+' PIN: '+(error.message||'PIN generation failed.'));return}
+  if(data?.error){alert(data.error);return}
+
+  const email=String(data?.email||'').trim();
+  const fullName=String(data?.full_name||name||'').trim();
+  const pin=String(data?.pin||'').trim();
+  if(!email){alert('PIN was generated, but this voter has no email address. Add the email address before issuing the PIN.');await loadVoters();return}
+  if(!/^\d{6}$/.test(pin)){alert('PIN generation returned an invalid PIN. The voter status was refreshed, but no email was opened.');await loadVoters();return}
+
   const subject='BMS Faculty Election 2026 — Your Election PIN';
   const body=`Hello ${fullName},\n\nThis is your personal password/PIN for the BMS Faculty Election 2026.\n\nYour Election PIN: ${pin}\n\nPlease keep this PIN safe and do not share it with anyone. You will need it to access the voting portal.\n\nSigned,\nElectoral Chairman\nBMS Faculty Electoral Committee\nBasic Medical Sciences, University of Delta, Agbor`;
-  const mailto=`mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.location.href=mailto;
+
+  await loadVoters();
+
+  const mailto='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  const link=document.createElement('a');
+  link.href=mailto;
+  link.style.display='none';
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(()=>link.remove(),1000);
 }
+
 async function editVoterEmail(id,name,current){
   const value=prompt(`Email address for ${name}:`,current||'');
   if(value===null)return;
