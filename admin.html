@@ -157,11 +157,11 @@ const DEPARTMENT_LEVELS={
   'Department of Radiography and Radiation Science':[100,200,300,400,500]
 };
 function canonicalDepartment(value){
-  const v=String(value||'').toLowerCase().replace(/^department of\\s*/,'').replace(/[^a-z]/g,'');
+  const v=String(value||'').toLowerCase().replace(/^department of\s*/,'').replace(/[^a-z]/g,'');
   const map=[['humananatomy','Department of Human Anatomy'],['anatomy','Department of Human Anatomy'],['humanphysiology','Department of Human Physiology'],['physiology','Department of Human Physiology'],['medicalbiochemistry','Department of Medical Biochemistry'],['biochemistry','Department of Medical Biochemistry'],['medicallaboratoryscience','Department of Medical Laboratory Science'],['medlab','Department of Medical Laboratory Science'],['mls','Department of Medical Laboratory Science'],['nursingscience','Department of Nursing Science'],['nursing','Department of Nursing Science'],['publichealth','Department of Public Health'],['radiographyandradiationscience','Department of Radiography and Radiation Science'],['radiographyradiationscience','Department of Radiography and Radiation Science'],['radiography','Department of Radiography and Radiation Science']];
   return map.find(([key])=>v===key||v.includes(key))?.[1]||String(value||'Unclassified department');
 }
-function levelNumber(value){const n=Number(String(value||'').replace(/\\D/g,''));return [100,200,300,400,500].includes(n)?n:null}
+function levelNumber(value){const n=Number(String(value||'').replace(/\D/g,''));return [100,200,300,400,500].includes(n)?n:null}
 function updateImportLevels(){const d=document.getElementById('importDepartment')?.value||'',el=document.getElementById('importLevel');if(!el)return;el.innerHTML='<option value="">Select level</option>'+(DEPARTMENT_LEVELS[d]||[]).map(n=>`<option value="${n}">${n} Level</option>`).join('')}
 function onDepartmentFilterChange(){const d=document.getElementById('departmentFilter')?.value||'',el=document.getElementById('levelFilter');if(el){const current=el.value;el.innerHTML='<option value="">All levels</option>'+(DEPARTMENT_LEVELS[d]||[]).map(n=>`<option value="${n}">${n} Level</option>`).join('');if((DEPARTMENT_LEVELS[d]||[]).includes(Number(current)))el.value=current}renderDepartmentSegments();filterVoters(document.getElementById('voterSearch')?.value||'')}
 function chooseDepartment(d){const search=document.getElementById('voterSearch');if(search)search.value='';const el=document.getElementById('departmentFilter');if(el)el.value=d;onDepartmentFilterChange();document.getElementById('voterData')?.scrollIntoView({behavior:'smooth',block:'start'})}
