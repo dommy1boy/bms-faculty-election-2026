@@ -14,7 +14,23 @@ body{overflow-x:hidden}.admin-content,.admin-page,.card{min-width:0}.csv-format{
 const SUPABASE_URL='https://dlzjnxhvcysknajtxhij.supabase.co',KEY='sb_publishable_xl4C_1obFH_6z-thh_eMBw_0M2RMHpu',ELECTION='024a7a81-13dc-4fb2-adff-4851a29e0084',BUCKET='candidate-photos';
 const db=supabase.createClient(SUPABASE_URL,KEY);
 let positions=[];
-async function login(){const em=document.getElementById('email'),pw=document.getElementById('password'),msg=document.getElementById('lm');msg.textContent='Signing in...';msg.className='';const {error}=await db.auth.signInWithPassword({email:em.value.trim(),password:pw.value});if(error){msg.className='danger';msg.textContent=error.message;return}await load()}
+async function login(){
+  const em=document.getElementById('email'),pw=document.getElementById('password'),msg=document.getElementById('lm'),btn=document.querySelector('#login button');
+  if(!em.value.trim()||!pw.value){msg.className='danger';msg.textContent='Enter your admin email and password.';return}
+  msg.textContent='Signing in...';msg.className='';
+  if(btn){btn.disabled=true;btn.textContent='Signing in...'}
+  try{
+    const {error}=await db.auth.signInWithPassword({email:em.value.trim(),password:pw.value});
+    if(error){msg.className='danger';msg.textContent='Sign-in failed: '+error.message;return}
+    await load();
+  }catch(err){
+    msg.className='danger';
+    msg.textContent='Sign-in could not complete. Check your internet connection and try again. '+(err?.message||'');
+    console.error('Admin sign-in error:',err);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Sign in'}
+  }
+}
 async function load(){
   const {data:{session}}=await db.auth.getSession();
   if(!session){
