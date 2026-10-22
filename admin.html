@@ -202,7 +202,7 @@ function voterRow(v,pinMap){
   const p=pinMap.get(v.id); const issued=(p?.pin_issued === true && Number(p?.pin_version) > 0);
   const email=v.email||'', phone=v.whatsapp_number||'';
   const pinButton=v.eligible ? `<button onclick="manageVoterPin('${v.id}','${esc(v.full_name)}',${issued})">${issued?'Replace PIN':'Issue PIN'}</button>` : '<button disabled>PIN unavailable</button>';
-  return `<tr><td>${esc(v.full_name)}</td><td>${esc(v.matric_number)}</td><td>${esc(canonicalDepartment(v.department))}</td><td>${esc(levelNumber(v.level)?levelNumber(v.level)+' Level':'Level not set')}</td><td>${email?esc(email):'<span class="danger">Not set</span>'}</td><td>${phone?esc(phone):'<span class="danger">Not set</span>'}</td><td>${v.eligible?'Yes':'No'}</td><td>${v.has_voted?'Yes':'No'}</td><td>${issued?`<b>Issued ✓</b><br><small>v${p.pin_version||1}</small>`:'<span>Not issued</span>'}</td><td>${pinButton}<button onclick="editVoterBasic('${v.id}')">Edit</button><button onclick="editVoter('${v.id}')">Edit All Details</button><button onclick="toggleEligibility('${v.id}',${v.eligible})">${v.eligible?'Make Ineligible':'Make Eligible'}</button><button class="danger" onclick="removeVoter('${v.id}','${esc(v.full_name)}')">Remove</button></td></tr>`;
+  return `<tr><td>${esc(v.full_name)}</td><td>${esc(v.matric_number)}</td><td>${esc(canonicalDepartment(v.department))}</td><td>${esc(levelNumber(v.level)?levelNumber(v.level)+' Level':'Level not set')}</td><td>${email?esc(email):'<span class="danger">Not set</span>'}</td><td>${phone?esc(phone):'<span class="danger">Not set</span>'}</td><td>${v.eligible?'Yes':'No'}</td><td>${v.has_voted?'Yes':'No'}</td><td>${issued?`<b>Issued ✓</b><br><small>v${p.pin_version||1}</small>`:'<span>Not issued</span>'}</td><td>${pinButton}<button type="button" onclick="window.editVoterBasic('${v.id}')">Edit</button><button type="button" onclick="window.editVoter('${v.id}')">Edit All Details</button><button type="button" onclick="window.toggleEligibility('${v.id}',${v.eligible})">${v.eligible?'Make Ineligible':'Make Eligible'}</button><button type="button" class="danger" onclick="window.removeVoter('${v.id}','${esc(v.full_name)}')">Remove</button></td></tr>`;
 }
 function voterTable(rows){
   if(!rows.length)return '<p style="padding:12px">No matching voters found.</p>';
@@ -424,6 +424,12 @@ async function editVoter(id){
   if(error){alert('Could not save voter changes: '+error.message);return}
   await loadVoters();
 }
+
+// Explicitly expose voter actions for the inline buttons in the register.
+window.editVoterBasic=editVoterBasic;
+window.editVoter=editVoter;
+window.toggleEligibility=toggleEligibility;
+window.removeVoter=removeVoter;
 
 let pendingExcelPreview=false;
 async function importExcelFile(){
