@@ -202,7 +202,7 @@ function voterRow(v,pinMap){
   const p=pinMap.get(v.id); const issued=(p?.pin_issued === true && Number(p?.pin_version) > 0);
   const email=v.email||'', phone=v.whatsapp_number||'';
   const pinButton=v.eligible ? `<button onclick="manageVoterPin('${v.id}','${esc(v.full_name)}',${issued})">${issued?'Replace PIN':'Issue PIN'}</button>` : '<button disabled>PIN unavailable</button>';
-  return `<tr><td>${esc(v.full_name)}</td><td>${esc(v.matric_number)}</td><td>${esc(canonicalDepartment(v.department))}</td><td>${esc(levelNumber(v.level)?levelNumber(v.level)+' Level':'Level not set')}</td><td>${email?esc(email):'<span class="danger">Not set</span>'}</td><td>${phone?esc(phone):'<span class="danger">Not set</span>'}</td><td>${v.eligible?'Yes':'No'}</td><td>${v.has_voted?'Yes':'No'}</td><td>${issued?`<b>Issued ✓</b><br><small>v${p.pin_version||1}</small>`:'<span>Not issued</span>'}</td><td>${pinButton}<button onclick="editVoter('${v.id}')">Edit All Details</button><button onclick="toggleEligibility('${v.id}',${v.eligible})">${v.eligible?'Make Ineligible':'Make Eligible'}</button><button class="danger" onclick="removeVoter('${v.id}','${esc(v.full_name)}')">Remove</button></td></tr>`;
+  return `<tr><td>${esc(v.full_name)}</td><td>${esc(v.matric_number)}</td><td>${esc(canonicalDepartment(v.department))}</td><td>${esc(levelNumber(v.level)?levelNumber(v.level)+' Level':'Level not set')}</td><td>${email?esc(email):'<span class="danger">Not set</span>'}</td><td>${phone?esc(phone):'<span class="danger">Not set</span>'}</td><td>${v.eligible?'Yes':'No'}</td><td>${v.has_voted?'Yes':'No'}</td><td>${issued?`<b>Issued ✓</b><br><small>v${p.pin_version||1}</small>`:'<span>Not issued</span>'}</td><td>${pinButton}<button onclick="editVoterBasic('${v.id}')">Edit</button><button onclick="editVoter('${v.id}')">Edit All Details</button><button onclick="toggleEligibility('${v.id}',${v.eligible})">${v.eligible?'Make Ineligible':'Make Eligible'}</button><button class="danger" onclick="removeVoter('${v.id}','${esc(v.full_name)}')">Remove</button></td></tr>`;
 }
 function voterTable(rows){
   if(!rows.length)return '<p style="padding:12px">No matching voters found.</p>';
@@ -392,6 +392,18 @@ async function manageVoterPin(id,name,alreadyIssued){
   alert(`PIN email accepted by Sendliberty for ${data.full_name||name} at ${data.email}. Please ask the voter to check their inbox and spam folder. This confirms provider acceptance, not final inbox delivery.`);
 }
 
+async function editVoterBasic(id){
+  const voter=(window.allVoters||[]).find(v=>v.id===id);if(!voter)return;
+  const name=prompt('Edit this voter full name:',voter.full_name||'');if(name===null)return;if(!name.trim()){alert('Full name cannot be empty.');return}
+  const matric=prompt('Edit this voter matric number:',voter.matric_number||'');if(matric===null)return;if(!matric.trim()){alert('Matric number cannot be empty.');return}
+  const {data:duplicates,error:checkError}=await db.from('voters').select('id,matric_number').eq('election_id',ELECTION).eq('matric_number',matric.trim());
+  if(checkError){alert('Could not check matric number: '+checkError.message);return}
+  if((duplicates||[]).some(v=>v.id!==id)){alert('Another voter already uses this matric number. No changes were saved.');return}
+  if(!confirm('Save the name and matric number changes for '+voter.full_name+'?'))return;
+  const {error}=await db.from('voters').update({full_name:name.trim(),matric_number:matric.trim()}).eq('id',id).eq('election_id',ELECTION);
+  if(error){alert('Could not save voter changes: '+error.message);return}
+  await loadVoters();
+}
 async function editVoter(id){
   const voter=(window.allVoters||[]).find(v=>v.id===id);if(!voter)return;
   const name=prompt('Full name:',voter.full_name||'');if(name===null)return;if(!name.trim()){alert('Full name cannot be empty.');return}
