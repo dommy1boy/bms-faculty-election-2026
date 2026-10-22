@@ -177,10 +177,8 @@ function updateVoterBrowsePage(){
   const sections=page?[...page.querySelectorAll(':scope > section.card')]:[];
   const importSection=sections[0],searchSection=sections[1],departmentSection=page?.querySelector('.department-browser-card'),registerSection=sections[sections.length-1];
   const browsing=!!d;
-  if(importSection)importSection.style.display=browsing?'none':'';
-  if(searchSection)searchSection.style.display=browsing?'none':'';
+  sections.forEach(section=>{section.style.display=browsing?(section===registerSection?'':'none'):'';});
   if(departmentSection)departmentSection.style.display=browsing?'none':'';
-  if(registerSection)registerSection.style.display=browsing?'':'';
   const controls=document.getElementById('voterListControls');if(controls)controls.style.display='none';
   const crumb=document.getElementById('voterListBreadcrumb');if(crumb)crumb.textContent=d?(l?d+'  ›  '+l+' Level':d):'All Departments';
   const head=document.getElementById('voterListHeading');if(head)head.textContent=d?(l?d+' — '+l+' Level Voters':d):'All Imported Voters & PIN Status';
