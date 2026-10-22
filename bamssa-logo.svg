@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<rect width="512" height="512" rx="30" fill="#fff"/>
+<circle cx="256" cy="218" r="178" fill="#fff" stroke="#00a651" stroke-width="9"/>
+<circle cx="256" cy="218" r="160" fill="#102f56"/>
+<circle cx="256" cy="218" r="122" fill="#fff" stroke="#00a651" stroke-width="5"/>
+<g fill="#00a651" stroke="#00a651" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="256" cy="122" r="15"/>
+<path d="M249 141h14l8 126h-30z"/>
+<path d="M247 150c-39-26-76-23-104-20 21 27 53 40 101 39M265 150c39-26 76-23 104-20-21 27-53 40-101 39" fill="none" stroke-width="12"/>
+<path d="M248 181c-31-19-57-17-79-13 17 18 42 27 78 26M264 181c31-19 57-17 79-13-17 18-42 27-78 26" fill="none" stroke-width="10"/>
+<path d="M251 211c-38-16-58 8-39 24 13 11 34 8 44 21 10-13 31-10 44-21 19-16-1-40-39-24" fill="none" stroke-width="9"/>
+<path d="M256 216c-48 42 45 44 0 83-31 26 25 37 0 57" fill="none" stroke-width="8"/>
+<path d="M254 216c48 42-45 44 0 83 31 26-25 37 0 57" fill="none" stroke-width="8"/>
+</g>
+<path d="M160 286l-22 70 118-25 118 25-22-70-96 24z" fill="#fff" stroke="#00a651" stroke-width="4"/>
+<path d="M158 291l-10 57 108-19 108 19-10-57-98 25z" fill="none" stroke="#00a651" stroke-width="5"/>
+<path d="M80 365Q256 417 432 365l-16 49Q256 469 96 414z" fill="#102f56" stroke="#00a651" stroke-width="4"/>
+<text x="256" y="391" fill="#fff" font-family="Georgia,serif" font-weight="bold" font-size="31" text-anchor="middle">BAMSSA</text>
+<text x="256" y="448" fill="#102f56" font-family="Georgia,serif" font-weight="bold" font-size="17" text-anchor="middle">UNIVERSITY OF DELTA</text>
+<text x="256" y="58" fill="#102f56" font-family="Georgia,serif" font-weight="bold" font-size="16" text-anchor="middle">BASIC MEDICAL SCIENCES STUDENTS' ASSOCIATION</text>
+</svg>
