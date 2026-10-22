@@ -171,7 +171,32 @@ function chooseDepartment(d){voterBrowseState={department:d,level:''};const filt
 function chooseLevel(n){voterBrowseState.level=String(n);const lv=document.getElementById('levelFilter');if(lv)lv.value=String(n);updateVoterBrowsePage();filterVoters(document.getElementById('voterSearch')?.value||'');document.getElementById('voterListBreadcrumb').scrollIntoView({behavior:'smooth',block:'start'})}
 function backToDepartments(){voterBrowseState={department:'',level:''};const f=document.getElementById('departmentFilter');if(f)f.value='';const l=document.getElementById('levelFilter');if(l)l.innerHTML='<option value="">All levels</option>';updateVoterBrowsePage();filterVoters(document.getElementById('voterSearch')?.value||'')}
 function backToLevels(){if(!voterBrowseState.department)return;voterBrowseState.level='';const l=document.getElementById('levelFilter');if(l)l.value='';updateVoterBrowsePage();filterVoters(document.getElementById('voterSearch')?.value||'')}
-function updateVoterBrowsePage(){const d=voterBrowseState.department,l=voterBrowseState.level;const cards=document.querySelector('.department-browser-card');if(cards)cards.style.display=d?'none':'';const controls=document.getElementById('voterListControls');if(controls)controls.style.display='none';const crumb=document.getElementById('voterListBreadcrumb');if(crumb)crumb.textContent=d?(l?d+'  ›  '+l+' Level':d+'  ›  Select a level'):'All Departments';const head=document.getElementById('voterListHeading');if(head)head.textContent=d?(l?d+' — '+l+' Level Voters':d+' — Select a Level'):'All Imported Voters & PIN Status';const bd=document.getElementById('backToDepartments');if(bd)bd.style.display=d?'inline-block':'none';const bl=document.getElementById('backToLevels');if(bl)bl.style.display=d&&l?'inline-block':'none';const data=document.getElementById('voterData');if(data)data.style.display=d&&l?'':'none';const count=document.getElementById('voterCount');if(count)count.style.display=d&&!l?'none':'';if(d&&!l){const box=document.getElementById('voterData');if(box)box.innerHTML='<div class="department-level-grid">'+(DEPARTMENT_LEVELS[d]||[]).map(n=>{const count=(window.allVoters||[]).filter(v=>canonicalDepartment(v.department)===d&&levelNumber(v.level)===n).length;return `<button class="department-level-card" onclick="chooseLevel(${n})"><strong>${n} Level</strong><span>${count} voter${count===1?'':'s'}</span><span class="level-open">Open level →</span></button>`}).join('')+'</div>'} }
+function updateVoterBrowsePage(){
+  const d=voterBrowseState.department,l=voterBrowseState.level;
+  const page=document.getElementById('page-voter-import');
+  const sections=page?[...page.querySelectorAll(':scope > section.card')]:[];
+  const importSection=sections[0],searchSection=sections[1],departmentSection=page?.querySelector('.department-browser-card'),registerSection=sections[sections.length-1];
+  const browsing=!!d;
+  if(importSection)importSection.style.display=browsing?'none':'';
+  if(searchSection)searchSection.style.display=browsing?'none':'';
+  if(departmentSection)departmentSection.style.display=browsing?'none':'';
+  if(registerSection)registerSection.style.display=browsing?'':'';
+  const controls=document.getElementById('voterListControls');if(controls)controls.style.display='none';
+  const crumb=document.getElementById('voterListBreadcrumb');if(crumb)crumb.textContent=d?(l?d+'  ›  '+l+' Level':d):'All Departments';
+  const head=document.getElementById('voterListHeading');if(head)head.textContent=d?(l?d+' — '+l+' Level Voters':d):'All Imported Voters & PIN Status';
+  const bd=document.getElementById('backToDepartments');if(bd)bd.style.display=browsing?'inline-block':'none';
+  const bl=document.getElementById('backToLevels');if(bl)bl.style.display=d&&l?'inline-block':'none';
+  const data=document.getElementById('voterData');
+  if(data)data.style.display=d&&l?'':'none';
+  const count=document.getElementById('voterCount');if(count)count.style.display=d&&!l?'none':'';
+  const hint=registerSection?.querySelector('.helper-text');if(hint)hint.style.display=d?'none':'';
+  if(d&&!l&&data){
+    data.innerHTML='<div class="department-level-grid">'+(DEPARTMENT_LEVELS[d]||[]).map(n=>{
+      const count=(window.allVoters||[]).filter(v=>canonicalDepartment(v.department)===d&&levelNumber(v.level)===n).length;
+      return '<button type="button" class="department-level-card" onclick="chooseLevel('+n+')"><strong>'+n+' Level</strong><span>'+count+' voter'+(count===1?'':'s')+'</span><span class="level-open">Open level →</span></button>';
+    }).join('')+'</div>';
+  }
+}
 function renderDepartmentSegments(){const box=document.getElementById('departmentSegments');if(!box)return;box.innerHTML=Object.entries(DEPARTMENT_LEVELS).map(([d,levels])=>{const count=(window.allVoters||[]).filter(v=>canonicalDepartment(v.department)===d).length;return `<button type="button" class="department-segment" onclick="chooseDepartment('${d}')"><span class="department-segment-title">${d}</span><span class="department-segment-meta">${count} voter${count===1?'':'s'} · ${levels.length} levels</span><span class="level-open">Open department →</span></button>`}).join('')}
 function filterVoters(value){
   const q=String(value||'').trim().toLowerCase(),dept=document.getElementById('departmentFilter')?.value||'',level=document.getElementById('levelFilter')?.value||'';
