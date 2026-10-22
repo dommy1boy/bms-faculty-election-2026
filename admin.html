@@ -190,7 +190,7 @@ async function manageVoterPin(id,name,alreadyIssued){
   if(!/^\d{6}$/.test(pin)){alert('PIN generation returned an invalid PIN. The voter status was refreshed, but no email was opened.');await loadVoters();return}
 
   const subject='BMS Faculty Election 2026 — Your Election PIN';
-  const body=`Hello ${fullName},\n\nThis is your personal password/PIN for the BMS Faculty Election 2026.\n\nYour Election PIN: ${pin}\n\nPlease keep this PIN safe and do not share it with anyone. You will need it to access the voting portal.\n\nSigned,\nElectoral Chairman\nBMS Faculty Electoral Committee\nBasic Medical Sciences, University of Delta, Agbor`;
+  const body=`Hello ${fullName},\n\nThis is your personal password/PIN for the BMS Faculty Election 2026.\n\nYour Election PIN: ${pin}\n\nPlease keep this PIN safe and do not share it with anyone. You will need it to access the voting portal.\n\nSigned,\nElectoral Chairman\nBasic Medical Sciences Student Electoral Commission\nBasic Medical Sciences, University of Delta, Agbor`;
 
   await loadVoters();
 
