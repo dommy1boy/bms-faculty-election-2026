@@ -281,13 +281,13 @@ async function importVoters(){
   const department=document.getElementById('importDepartment')?.value||'',level=levelNumber(document.getElementById('importLevel')?.value);
   if(!department){im.textContent='Select a department before importing.';return}
   if(!level||!(DEPARTMENT_LEVELS[department]||[]).includes(level)){im.textContent='Select a valid level for this department.';return}
-  const lines=document.getElementById('csv').value.split(/\\n/).map(x=>x.trim()).filter(Boolean),rows=[],bad=[];
+  const lines=document.getElementById('csv').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),rows=[],bad=[];
   for(let i=0;i<lines.length;i++){
     const a=lines[i].split(',').map(x=>x.trim());
     if(a.length<2||!a[0]||!a[1]){bad.push(i+1);continue}
     const email=a.length>=5?(a[3]||null):(a[2]||null);
     const phone=a.length>=5?(a[4]||null):(a[3]||null);
-    if(email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){bad.push(i+1);continue}
+    if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){bad.push(i+1);continue}
     rows.push({election_id:ELECTION,matric_number:a[0],full_name:a[1],department,level:String(level),email,whatsapp_number:phone});
   }
   if(bad.length){im.textContent='Import stopped: check line(s) '+bad.join(', ')+'. No records were imported. Ensure each line has matric number, full name, and a valid email if supplied.';return}
