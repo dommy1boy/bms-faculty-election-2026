@@ -185,7 +185,7 @@ function updateVoterBrowsePage(){
   const bd=document.getElementById('backToDepartments');if(bd)bd.style.display=browsing?'inline-block':'none';
   const bl=document.getElementById('backToLevels');if(bl)bl.style.display=d&&l?'inline-block':'none';
   const data=document.getElementById('voterData');
-  if(data)data.style.display=d&&l?'':'none';
+  if(data)data.style.display=d?'':'none';
   const count=document.getElementById('voterCount');if(count)count.style.display=d&&!l?'none':'';
   const hint=registerSection?.querySelector('.helper-text');if(hint)hint.style.display=d?'none':'';
   if(d&&!l&&data){
