@@ -201,8 +201,10 @@ const DEPARTMENT_LEVELS={
   'Department of Public Health':[100,200,300,400],
   'Department of Radiography and Radiation Science':[100,200,300,400,500]
 };
+function normalizeMatch(value){return String(value??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('en-US')}
+function normalizeIdentifier(value){return normalizeMatch(value).replace(/\s+/g,'')}
 function canonicalDepartment(value){
-  const v=String(value||'').toLowerCase().replace(/^department of\s*/,'').replace(/[^a-z]/g,'');
+  const v=normalizeMatch(value).replace(/^department of\s*/,'').replace(/[^a-z]/g,'');
   const map=[['humananatomy','Department of Human Anatomy'],['anatomy','Department of Human Anatomy'],['humanphysiology','Department of Human Physiology'],['physiology','Department of Human Physiology'],['medicalbiochemistry','Department of Medical Biochemistry'],['biochemistry','Department of Medical Biochemistry'],['medicallaboratoryscience','Department of Medical Laboratory Science'],['medlab','Department of Medical Laboratory Science'],['mls','Department of Medical Laboratory Science'],['nursingscience','Department of Nursing Science'],['nursing','Department of Nursing Science'],['publichealth','Department of Public Health'],['radiographyandradiationscience','Department of Radiography and Radiation Science'],['radiographyradiationscience','Department of Radiography and Radiation Science'],['radiography','Department of Radiography and Radiation Science']];
   return map.find(([key])=>v===key||v.includes(key))?.[1]||String(value||'Unclassified department');
 }
@@ -240,9 +242,9 @@ function updateVoterBrowsePage(){
 }
 function renderDepartmentSegments(){const box=document.getElementById('departmentSegments');if(!box)return;box.innerHTML=Object.entries(DEPARTMENT_LEVELS).map(([d,levels])=>{const count=(window.allVoters||[]).filter(v=>canonicalDepartment(v.department)===d).length;return `<button type="button" class="department-segment" onclick="chooseDepartment('${d}')"><span class="department-segment-title">${d}</span><span class="department-segment-meta">${count} voter${count===1?'':'s'} · ${levels.length} levels</span><span class="level-open">Open department →</span></button>`}).join('')}
 function filterVoters(value){
-  const q=String(value||'').trim().toLowerCase(),dept=document.getElementById('departmentFilter')?.value||'',level=document.getElementById('levelFilter')?.value||'';
+  const q=normalizeMatch(value),dept=document.getElementById('departmentFilter')?.value||'',level=document.getElementById('levelFilter')?.value||'';
   const all=window.allVoters||[];
-  const activeDept=voterBrowseState?.department||dept,activeLevel=voterBrowseState?.level||level;const rows=all.filter(v=>q?(String(v.full_name||'').toLowerCase().includes(q)||String(v.matric_number||'').toLowerCase().includes(q)):(!activeDept||canonicalDepartment(v.department)===activeDept)&&(!activeLevel||String(levelNumber(v.level)||'')===String(activeLevel)));
+  const activeDept=voterBrowseState?.department||dept,activeLevel=voterBrowseState?.level||level;const rows=all.filter(v=>q?(normalizeMatch(v.full_name).includes(q)||normalizeIdentifier(v.matric_number).includes(normalizeIdentifier(q))||normalizeMatch(v.email).includes(q)):(!activeDept||normalizeMatch(canonicalDepartment(v.department))===normalizeMatch(activeDept))&&(!activeLevel||String(levelNumber(v.level)||'')===String(activeLevel)));
   const dataBox=document.getElementById('voterData');if(dataBox&&(!voterBrowseState?.department||voterBrowseState?.level))dataBox.innerHTML=voterTable(rows);
   const heading=document.getElementById('voterListHeading');if(heading)heading.textContent=q?'Faculty-wide Search Results':dept?(dept+(level?' · '+level+' Level':'')):'All Imported Voters & PIN Status';
   const count=document.getElementById('voterCount');if(count)count.textContent=q?`${rows.length} matching voter${rows.length===1?'':'s'} across all departments`:`${rows.length} voter${rows.length===1?'':'s'} in this view`;
