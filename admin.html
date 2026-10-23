@@ -90,33 +90,33 @@ function downloadResultsPDF(){
   const data=window.latestResults;
   if(!data){alert('Results are not available yet.');return}
   if(!window.jspdf?.jsPDF){alert('PDF generator could not load. Please use Print and choose Save as PDF.');return}
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:'mm',format:'a4'});
-  const margin=15, pageW=210, contentW=pageW-margin*2;
-  let y=18;
-  const lineHeight=6;
-  const ensure=(needed=10)=>{if(y+needed>282){doc.addPage();y=18}};
-  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('BMS Faculty Election 2026',margin,y);y+=8;
-  doc.setFontSize(13);doc.text('Official Election Results',margin,y);y+=8;
-  doc.setFont('helvetica','normal');doc.setFontSize(10);
-  doc.text(`Eligible to vote: ${data.eligible_voters}`,margin,y);doc.text(`People who voted: ${data.voted_voters}`,margin+70,y);y+=9;
+  const {jsPDF}=window.jspdf,doc=new jsPDF({unit:'mm',format:'a4'});
+  const margin=16,width=178;let y=18;
+  const ensure=(h=8)=>{if(y+h>280){doc.addPage();y=18}};
+  const wrapped=(text,size=9,bold=false)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);const lines=doc.splitTextToSize(String(text??'—'),width);for(const line of lines){ensure(5);doc.text(line,margin,y);y+=4.5}};
+  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('BAMSSA Faculty Election 2026',margin,y);y+=8;
+  doc.setFontSize(13);doc.text('Official Election Results',margin,y);y+=7;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text('Generated: '+new Date().toLocaleString(),margin,y);y+=7;
+  const eligible=Number(data.eligible_voters)||0,voted=Number(data.voted_voters)||0;
+  wrapped('Eligible voters: '+eligible+'    |    Voters who voted: '+voted+'    |    Turnout: '+(eligible?(voted/eligible*100).toFixed(1):'0.0')+'%');
+  y+=3;
   for(const p of (data.positions||[])){
-    const rows=[...(p.candidates||[]).map(c=>({name:c.candidate_name,votes:Number(c.votes)||0})),...(p.nil_votes>0||!(p.candidates||[]).length?[{name:'Nil',votes:Number(p.nil_votes)||0}]:[])];
-    ensure(22);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(String(p.position_name),margin,y);y+=7;
-    const max=Math.max(1,...rows.map(r=>r.votes));
+    ensure(18);doc.setFillColor(230,238,248);doc.rect(margin-1,y-5,width+2,8,'F');doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(String(p.position_name||'Position'),margin,y);y+=8;
+    const rows=[...(p.candidates||[]).map(c=>({name:c.candidate_name,votes:Number(c.votes)||0})),...(Number(p.nil_votes)>0||!(p.candidates||[]).length?[{name:'Nil',votes:Number(p.nil_votes)||0}]:[])];
+    const total=rows.reduce((n,r)=>n+r.votes,0),max=Math.max(0,...rows.map(r=>r.votes)),leaders=rows.filter(r=>r.votes===max&&max>0);
+    if(leaders.length===1)wrapped('Highest votes: '+leaders[0].name+' ('+leaders[0].votes+')',9,true);
+    else if(leaders.length>1)wrapped('Tie at the highest vote count: '+leaders.map(r=>r.name).join(', '),9,true);
     for(const r of rows){
-      ensure(13);doc.setFont('helvetica','normal');doc.setFontSize(9);
-      const label=String(r.name); const shown=label.length>42?label.slice(0,39)+'...':label;
-      doc.text(shown,margin,y);doc.text(`${r.votes} vote${r.votes===1?'':'s'}`,margin+contentW,y,{align:'right'});y+=3;
-      const barMax=contentW-2, barW=Math.max(0,(r.votes/max)*barMax);
-      doc.setFillColor(235,239,246);doc.rect(margin,y,barMax,4,'F');
-      if(barW>0){doc.setFillColor(23,59,143);doc.rect(margin,y,barW,4,'F')}
-      y+=7;
+      ensure(12);const pct=total?(r.votes/total*100).toFixed(1):'0.0';
+      doc.setFont('helvetica','normal');doc.setFontSize(9);
+      const lines=doc.splitTextToSize(String(r.name||'Candidate'),width-48);
+      doc.text(lines,margin,y);doc.text(String(r.votes),margin+width-35,y);doc.text(pct+'%',margin+width,y,{align:'right'});
+      y+=Math.max(5,lines.length*4)+1;
     }
-    y+=2;
+    wrapped('Total votes recorded: '+total,8,false);y+=4;
   }
-  doc.setFont('helvetica','normal');doc.setFontSize(8);ensure(8);doc.text('Aggregate results only. No voter identities or individual ballots are included.',margin,y);
-  doc.save('BMS-Faculty-Election-2026-Official-Results.pdf');
+  ensure(10);doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('Aggregate results only. No voter identities or individual ballots are included.',margin,y);
+  doc.save('BAMSSA-Faculty-Election-2026-Official-Results.pdf');
 }
 function updateStatusUI(s){document.getElementById('status').dataset.status=s;const locked=['open','closed','published'].includes(s);document.getElementById('positionCard').querySelectorAll('input,button').forEach(x=>x.disabled=locked);document.getElementById('candidateCard').querySelectorAll('input,textarea,select,button').forEach(x=>x.disabled=locked);document.getElementById('positionLockMsg').style.display=locked?'block':'none';document.getElementById('candidateLockMsg').style.display=locked?'block':'none';document.getElementById('data').classList.toggle('roster-locked',locked);const el=document.getElementById('status');el.textContent=s==='open'?'Election Open':s==='closed'?'Election Closed':s==='published'?'Results Displayed':'Election Not Open';el.className='status-pill '+(s==='open'?'status-open':s==='closed'?'status-closed':s==='published'?'status-published':'');document.getElementById('statusHelp').textContent=s==='open'?'Voting is currently open. Close the election before displaying results.':s==='closed'?'Voting is closed. The electoral chairman can display the results after verification.':s==='published'?'Voting is closed and results are currently displayed. You can cancel the display to hide them again.':'Election is not open. The electoral chairman must verify before opening it.';document.getElementById('openBtn').disabled=s==='open'||s==='published';document.getElementById('closeBtn').disabled=s!=='open';document.getElementById('resultsBtn').disabled=s!=='closed';document.getElementById('cancelDisplayBtn').style.display=s==='published'?'inline-block':'none';document.getElementById('cancelDisplayBtn').disabled=s!=='published';document.getElementById('resetBtn').disabled=s==='open'}
 function esc(x){return String(x??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]))}
