@@ -23,6 +23,36 @@ button.secondary{background:#e9eff6;color:#173b63;border:1px solid #c7d4e2}
 .portal-info{background:#f8fbff;color:#26384b}
 .portal-info summary,.portal-info h2,.portal-info h3{color:#102f56}
 
+
+/* Explicit light-surface dark-text and dark-surface light-text rules */
+body{background:#f4f7fb;color:#10243e}
+body h1,body h2,body h3,body h4,body p,body li,body label,body small,body strong,body span{color:inherit}
+.portal-hero{background:#102f56;color:#fff}
+.portal-hero h1,.portal-hero h2,.portal-hero h3,.portal-hero p,.portal-hero li,.portal-hero strong,.portal-hero span{color:#fff}
+.portal-hero a{color:#bfe7ff}
+.student-welcome{background:#102f56;color:#fff}
+.student-welcome h1,.student-welcome h2,.student-welcome h3,.student-welcome p,.student-welcome li,.student-welcome strong,.student-welcome span{color:#fff}
+.student-welcome a{color:#bfe7ff}
+.admin-access-footer{background:#102f56;color:#fff}
+.admin-access-footer p,.admin-access-footer strong{color:#fff}
+.admin-access-footer a{color:#bfe7ff}
+.card,.review,.candidate,.portal-info,.student-stage,.position-choice,.modal,.panel,.result-card{background:#fff;color:#10243e}
+.card h1,.card h2,.card h3,.card p,.card li,.card label,.card small,.card strong,
+.review h1,.review h2,.review h3,.review p,.review span,.review strong,
+.candidate h1,.candidate h2,.candidate h3,.candidate p,.candidate li,.candidate label,.candidate span,.candidate strong,
+.portal-info h1,.portal-info h2,.portal-info h3,.portal-info p,.portal-info li,.portal-info summary,.portal-info strong,
+.student-stage h1,.student-stage h2,.student-stage h3,.student-stage p,.student-stage li,.student-stage label,.student-stage strong,
+.position-choice strong,.position-choice small,.position-choice .position-status{color:#10243e}
+.candidate .manifesto,.candidate .manifesto p,.student-stage .manifesto,.student-stage .manifesto p{color:#1e293b}
+input,textarea,select{background:#fff!important;color:#10243e!important;border-color:#8294aa}
+input::placeholder,textarea::placeholder{color:#52647a!important;opacity:1}
+button:not(.secondary):not(.next-disabled){color:#fff}
+button.secondary{background:#e8eef5;color:#12365a;border:1px solid #c4d2e1}
+button:disabled,.next-disabled{background:#b8c2cc!important;color:#fff!important}
+.msg.success{background:#e7f7ed;color:#14532d}
+.msg.err{background:#fff0f0;color:#991b1b}
+.table-scroll th,.table-scroll td{color:#10243e}
+
 </style></head><body><div class="wrap"><div class="card portal-hero"><div class="commission-brand"><img class="bamssa-logo" src="/bamssa-logo.jpg" alt="BAMSSA emblem"> <span><strong>BAMSEC</strong><br>Basic Medical Sciences Student Electoral Commission</span></div><div class="hero-rule"></div><h1>BMS Faculty Election 2026</h1><p>University of Delta, Agbor</p><details class="portal-info about-bamssa"><summary>About BAMSSA</summary><div class="about-bamssa-content"><h2>About BAMSSA</h2><p>The Basic Medical Sciences Students’ Association (BAMSSA) represents students across the Basic Medical Sciences, promotes student welfare, academic growth, unity, leadership and constructive engagement with the faculty and university community.</p><p><strong>Our purpose:</strong> to encourage service, responsible leadership, collaboration and a supportive environment where students can learn, contribute and thrive.</p></div></details><details class="portal-info how-to-vote"><summary>How to Vote</summary><div class="how-to-vote-content"><h2>How to vote</h2><ol><li>Use your registered full name and matriculation number exactly as submitted to the electoral committee.</li><li>Enter the six-digit election PIN sent to your registered email address.</li><li>Tap <strong>Verify voter</strong> and wait for the ballot to load.</li><li>Read each position carefully and select your preferred candidate.</li><li>Review your selections before submitting your vote.</li><li>Submit only when you are satisfied. Do not share your PIN or allow another person to vote on your behalf.</li></ol><p class="small">If your name, matric number or email is incorrect, contact the electoral committee for verification and correction before voting. Keep your PIN private.</p></div></details><div id="msg" class="msg">Enter your registered name, matric number and personal election PIN to verify your eligibility.</div><div id="verify"><label>Full name</label><input class="verifyInput" id="name" placeholder="Enter your full name"><label>Matric number</label><input class="verifyInput" id="matric" placeholder="Enter your matric number"><label>Election PIN</label><input class="verifyInput" id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="Enter your 6 digit election PIN"><button id="verifyBtn">Verify voter</button></div><div id="publicResults" style="display:none"></div><div id="ballot" style="display:none"></div></div><footer class="admin-access-footer"><p>Election officials only</p><a href="admin.html">Login as Admin <span aria-hidden="true">↗</span></a></footer></div><script>
 const {createClient}=supabase;const db=createClient('https://dlzjnxhvcysknajtxhij.supabase.co','sb_publishable_xl4C_1obFH_6z-thh_eMBw_0M2RMHpu');
 const ELECTION='024a7a81-13dc-4fb2-adff-4851a29e0084';let voter=null,verificationToken=null,positions=[],candidates=[],current=0,selections={};
