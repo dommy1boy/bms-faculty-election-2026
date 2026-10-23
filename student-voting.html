@@ -10,6 +10,10 @@
 .candidate .manifesto{color:#344b63;text-shadow:none;font-weight:500}
 .candidate img{display:block;width:96px;height:96px;object-fit:cover;border-radius:12px;margin:0 0 8px}
 .candidate input{flex-shrink:0;margin-top:5px}
+
+.position-tile{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;background:#fff;color:#102f56;border:1px solid #dce7f3;border-radius:14px;padding:16px;margin:9px 0;box-shadow:0 3px 12px rgba(16,42,67,.04)}
+.position-tile:hover{background:#f4f8fd;border-color:#8eb0df;color:#102f56}
+.position-tile>span:first-child{display:flex;flex-direction:column;gap:5px;min-width:0}.position-tile strong{font-size:17px;color:#102f56}.position-status{font-size:13px;color:#64748b;font-weight:500}.position-status.done{color:#167343;font-weight:700}.back-menu{margin-bottom:14px}
 </style></head><body><div class="wrap"><div class="card portal-hero"><div class="commission-brand"><img class="bamssa-logo" src="/bamssa-logo.jpg" alt="BAMSSA emblem"> <span><strong>BAMSEC</strong><br>Basic Medical Sciences Student Electoral Commission</span></div><div class="hero-rule"></div><h1>BMS Faculty Election 2026</h1><p>University of Delta, Agbor</p><details class="portal-info about-bamssa"><summary>About BAMSSA</summary><div class="about-bamssa-content"><h2>About BAMSSA</h2><p>The Basic Medical Sciences Students’ Association (BAMSSA) represents students across the Basic Medical Sciences, promotes student welfare, academic growth, unity, leadership and constructive engagement with the faculty and university community.</p><p><strong>Our purpose:</strong> to encourage service, responsible leadership, collaboration and a supportive environment where students can learn, contribute and thrive.</p></div></details><details class="portal-info how-to-vote"><summary>How to Vote</summary><div class="how-to-vote-content"><h2>How to vote</h2><ol><li>Use your registered full name and matriculation number exactly as submitted to the electoral committee.</li><li>Enter the six-digit election PIN sent to your registered email address.</li><li>Tap <strong>Verify voter</strong> and wait for the ballot to load.</li><li>Read each position carefully and select your preferred candidate.</li><li>Review your selections before submitting your vote.</li><li>Submit only when you are satisfied. Do not share your PIN or allow another person to vote on your behalf.</li></ol><p class="small">If your name, matric number or email is incorrect, contact the electoral committee for verification and correction before voting. Keep your PIN private.</p></div></details><div id="msg" class="msg">Enter your registered name, matric number and personal election PIN to verify your eligibility.</div><div id="verify"><label>Full name</label><input class="verifyInput" id="name" placeholder="Enter your full name"><label>Matric number</label><input class="verifyInput" id="matric" placeholder="Enter your matric number"><label>Election PIN</label><input class="verifyInput" id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="Enter your 6 digit election PIN"><button id="verifyBtn">Verify voter</button></div><div id="publicResults" style="display:none"></div><div id="ballot" style="display:none"></div></div><footer class="admin-access-footer"><p>Election officials only</p><a href="admin.html">Login as Admin <span aria-hidden="true">↗</span></a></footer></div><script>
 const {createClient}=supabase;const db=createClient('https://dlzjnxhvcysknajtxhij.supabase.co','sb_publishable_xl4C_1obFH_6z-thh_eMBw_0M2RMHpu');
 const ELECTION='024a7a81-13dc-4fb2-adff-4851a29e0084';let voter=null,verificationToken=null,positions=[],candidates=[],current=0,selections={};
@@ -98,14 +102,61 @@ function renderWelcome(){
     '<div class="nav" style="justify-content:flex-end"><button type="button" onclick="startVoting()">Next: View Positions →</button></div></div>';
   show('Your details have been verified. Welcome to your voting workspace.','msg success');
 }
-function startVoting(){current=0;renderPosition()}
+function startVoting(){current=0;renderPositionsDirectory()}
 function renderVotedBallot(voted){const byPosition={};(voted||[]).forEach(v=>byPosition[v.position_id]=v.candidate_id);let html='<h2>Your submitted vote</h2><p class="msg success">You have already voted. You can log in again to view your selections, but you cannot vote again.</p>';positions.forEach(p=>{const cs=candidates.filter(c=>c.position_id===p.id);const cid=Object.prototype.hasOwnProperty.call(byPosition,p.id)?byPosition[p.id]:undefined;const choice=cid===null?'Nil':(cs.find(c=>c.id===cid)||{}).full_name||'No recorded selection';html+=`<div class="review"><strong>${esc(p.name)}</strong><br><span>${esc(choice)}</span><div class="small" style="margin-top:6px">Your recorded selection</div></div>`});document.getElementById('ballot').innerHTML=html;show('You have already voted. Your recorded selections are shown below.','msg success')}
-function renderPosition(){if(current>=positions.length)return renderReview();const p=positions[current],cs=candidates.filter(c=>c.position_id===p.id);let html=`<div class="progress">Position ${current+1} of ${positions.length}</div><h2>${esc(p.name)}</h2><p>${cs.length===1?'One candidate is contesting this position. You may vote for the candidate or choose Nil.':'Select one candidate for this position.'}</p>`;if(!cs.length)html+='<p class="msg err">No active candidates for this position. Please contact the election administrator.</p>';cs.forEach(c=>{const sel=selections[p.id]===c.id;html+=`<div class="candidate ${sel?'selected':''}" onclick="choose('${esc(c.id)}','${esc(p.id)}')"><label><input type="radio" name="currentPosition" ${sel?'checked':''} onchange="choose('${esc(c.id)}','${esc(p.id)}')"><div class="candidateInfo">${c.photo_url?`<img src="${esc(c.photo_url)}" alt="Candidate photo">`:''}<strong>${esc(c.full_name)}</strong>${c.department?`<div class="small">${esc(c.department)}</div>`:''}<div class="manifesto">${c.manifesto?esc(c.manifesto):'No manifesto provided.'}</div></div></label><div class="clear"></div></div>`});if(cs.length===1){const nil=selections[p.id]===null;html+=`<div class="candidate ${nil?'selected':''}" onclick="chooseNil('${esc(p.id)}')"><label><input type="radio" name="currentPosition" ${nil?'checked':''}><div class="candidateInfo"><strong>Nil</strong><div class="small">I choose not to vote for this candidate.</div></div></label></div>`}html+=`<div class="nav">${current>0?'<button class="secondary" onclick="prevPosition()">Back</button>':'<span></span>'}<button id="nextBtn" onclick="nextPosition()">${current===positions.length-1?'Review vote':'Next'}</button></div>`;document.getElementById('ballot').innerHTML=html;show('You are verified. Your selection is kept as you move between positions.','msg success')}
+function renderPositionsDirectory(){
+  let html='<div class="progress">YOUR BALLOT</div><h2>Election Positions</h2><p>Choose any position to view its candidates and cast your selection. You can return to this list at any time.</p>';
+  positions.forEach((p,i)=>{
+    const chosen=Object.prototype.hasOwnProperty.call(selections,p.id);
+    let choice='Not yet selected';
+    if(chosen){const c=candidates.find(x=>x.id===selections[p.id]);choice=selections[p.id]===null?'Nil selected':(c?c.full_name:'Selected');}
+    html+=`<button type="button" class="position-tile" onclick="openPosition(${i})"><span><strong>${esc(p.name)}</strong><span class="position-status ${chosen?'done':''}">${esc(choice)}</span></span><span aria-hidden="true">›</span></button>`;
+  });
+  html+='<div class="nav" style="justify-content:flex-end"><button type="button" onclick="finishVoting()">Finish Voting</button></div>';
+  document.getElementById('ballot').innerHTML=html;
+  show('Select a position to see its candidates. Your selections will be saved as you navigate.','msg success');
+}
+function openPosition(i){current=i;renderPosition()}
+function renderPosition(){
+  if(current>=positions.length)return renderPositionsDirectory();
+  const p=positions[current],cs=candidates.filter(c=>c.position_id===p.id);
+  let html='<button type="button" class="secondary back-menu" onclick="renderPositionsDirectory()">← All Positions</button>';
+  html+=`<div class="progress">Position ${current+1} of ${positions.length}</div><h2>${esc(p.name)}</h2><p>${cs.length===1?'One candidate is contesting this position. You may vote for the candidate or choose Nil.': 'Select one candidate for this position.'}</p>`;
+  if(!cs.length)html+='<p class="msg err">No active candidates are available for this position. Please contact the election administrator.</p>';
+  cs.forEach(c=>{
+    const sel=selections[p.id]===c.id;
+    html+=`<div class="candidate ${sel?'selected':''}" onclick="choose('${esc(c.id)}','${esc(p.id)}')"><label><input type="radio" name="currentPosition" ${sel?'checked':''} onchange="choose('${esc(c.id)}','${esc(p.id)}')"><div class="candidateInfo">${c.photo_url?`<img src="${esc(c.photo_url)}" alt="Candidate photo">`:''}<strong>${esc(c.full_name)}</strong>${c.department?`<div class="small">${esc(c.department)}</div>`:''}<div class="manifesto">${c.manifesto?esc(c.manifesto):'No manifesto provided.'}</div></div></label></div>`;
+  });
+  if(cs.length===1){const nil=selections[p.id]===null;html+=`<div class="candidate ${nil?'selected':''}" onclick="chooseNil('${esc(p.id)}')"><label><input type="radio" name="currentPosition" ${nil?'checked':''}><div class="candidateInfo"><strong>Nil</strong><div class="small">I choose not to vote for this candidate.</div></div></label></div>`;}
+  html+=`<div class="nav"><button type="button" class="secondary" onclick="renderPositionsDirectory()">← All Positions</button><button type="button" onclick="nextPosition()">${current===positions.length-1?'Back to Positions':'Next Position →'}</button></div>`;
+  document.getElementById('ballot').innerHTML=html;
+  show('Choose one option, then continue. Your selection is kept as you move between positions.','msg success');
+}
+function nextPosition(){
+  const p=positions[current],cs=candidates.filter(c=>c.position_id===p.id);
+  if(cs.length===0)return show('There are no active candidates for '+p.name+'. Please contact the election administrator.','msg err');
+  if(!(p.id in selections))return show('Please select an option for '+p.name+' before continuing.','msg err');
+  if(cs.length!==1&&selections[p.id]===null)return show('Nil is only available when exactly one candidate is contesting '+p.name+'.','msg err');
+  if(current<positions.length-1){current++;renderPosition()}else{renderPositionsDirectory()}
+}
+function prevPosition(){renderPositionsDirectory()}
+function finishVoting(){
+  const missing=positions.filter(p=>!Object.prototype.hasOwnProperty.call(selections,p.id));
+  if(missing.length){
+    let html='<h2>Positions still to vote for</h2><p>Please complete your selection for each of these positions before finishing.</p>';
+    html+='<div class="msg err"><strong>You have not selected an option for:</strong><ul>'+missing.map(p=>'<li>'+esc(p.name)+'</li>').join('')+'</ul></div>';
+    html+='<div class="nav"><button type="button" class="secondary" onclick="renderPositionsDirectory()">Back to Positions</button><button type="button" onclick="openPosition('+positions.indexOf(missing[0])+')">Go to First Missing Position</button></div>';
+    document.getElementById('ballot').innerHTML=html;
+    show('Some positions still need your selection.','msg err');
+    return;
+  }
+  renderReview();
+}
 function choose(cid,pid){selections[pid]=cid;renderPosition()}
 function chooseNil(pid){selections[pid]=null;renderPosition()}
 function nextPosition(){const p=positions[current];const cs=candidates.filter(c=>c.position_id===p.id);if(cs.length===0)return show(`No active candidate is available for ${p.name}.`,'msg err');if(!(p.id in selections))return show(`Please select an option for ${p.name}.`,'msg err');if(cs.length!==1&&selections[p.id]===null)return show(`Nil is only available when exactly one candidate is contesting ${p.name}.`,'msg err');current++;renderPosition()}
 function prevPosition(){if(current>0)current--;renderPosition()}
-function renderReview(){let html='<h2>Review your vote</h2><p>Check your selections before submitting. You can go back and change any selection.</p>';positions.forEach((p,i)=>{const c=candidates.find(x=>x.id===selections[p.id]);const choice=selections[p.id]===null?'Nil':(c?esc(c.full_name):'No selection');html+=`<div class="review"><strong>${esc(p.name)}</strong><br>${choice}<br><button class="secondary" style="margin-top:8px" onclick="editPosition(${i})">Change</button></div>`});html+='<div class="nav"><button class="secondary" onclick="prevPosition()">Back</button><button id="submitBtn" onclick="submitVote()">Submit Vote</button></div>';document.getElementById('ballot').innerHTML=html;show('Review everything carefully before submitting.','msg')}
+function renderReview(){let html='<h2>Review your vote</h2><p>Check your selections before submitting. You can return to the positions list to make changes.</p>';positions.forEach((p,i)=>{const c=candidates.find(x=>x.id===selections[p.id]);const choice=selections[p.id]===null?'Nil':(c?esc(c.full_name):'No selection');html+=`<div class="review"><strong>${esc(p.name)}</strong><br>${choice}<br><button class="secondary" style="margin-top:8px" onclick="editPosition(${i})">Change</button></div>`});html+='<div class="nav"><button class="secondary" onclick="renderPositionsDirectory()">Back to Positions</button><button id="submitBtn" onclick="submitVote()">Submit Vote</button></div>';document.getElementById('ballot').innerHTML=html;show('Review everything carefully before submitting.','msg')}
 function editPosition(i){current=i;renderPosition()}
 async function submitVote(){const btn=document.getElementById('submitBtn');const selectionsArray=positions.map(p=>({position_id:p.id,candidate_id:selections[p.id]}));if(selectionsArray.some(x=>!(x.position_id in selections)))return show('Please select an option for every position.','msg err');if(!confirm('Submit your vote? You will not be able to vote again.'))return;btn.disabled=true;show('Submitting your vote...');try{const {data,error}=await db.rpc('cast_votes',{p_election_id:ELECTION,p_verification_token:verificationToken,p_selections:selectionsArray});if(error)throw error;show('Your vote has been submitted successfully. Thank you for voting.','msg success');document.getElementById('ballot').innerHTML='<h2>Vote submitted</h2><p>Your vote has been recorded successfully.</p>'}catch(e){show(e.message||'Vote submission failed.','msg err');btn.disabled=false}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}document.getElementById('verifyBtn').onclick=verify;
