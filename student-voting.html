@@ -10,6 +10,30 @@
 .candidateInfo .small{color:#52657a}
 .candidate .manifesto{color:#26384b;line-height:1.65;overflow-wrap:anywhere;white-space:normal}
 @media(max-width:600px){.candidate img{max-width:100%;height:250px}}
+
+/* Contrast audit: keep text readable against every student portal surface */
+.portal-hero{color:#fff}
+.portal-hero h1,.portal-hero h2,.portal-hero h3,.portal-hero strong{color:#fff}
+.portal-hero p,.portal-hero li{color:#e6effa}
+.portal-info,.portal-info *{text-shadow:none}
+.portal-info,.portal-info p,.portal-info li,.portal-info .small{color:#26384b}
+.portal-info h2,.portal-info summary,.portal-info strong{color:#102f56}
+#verify label{display:block;color:#fff;text-shadow:none;margin-top:6px}
+#verify input{background:#fff;color:#172b4d}
+#msg{color:#172b4d}
+.candidate,.candidate *{text-shadow:none}
+.candidate label,.candidateInfo,.candidateInfo p,.candidateInfo div{color:#26384b}
+.candidateInfo strong,.candidateInfo .candidateName{color:#102f56}
+.candidate .manifesto,.candidate .manifesto p{color:#26384b}
+.review,.review *{color:#26384b}
+.review strong{color:#102f56}
+.progress,.small{color:#52657a}
+.student-workspace{background:#fff;color:#26384b}
+.student-workspace h2,.student-workspace h3,.student-workspace strong{color:#102f56}
+.student-welcome,.student-welcome *{color:#fff}
+.student-welcome p{color:#e6effa}
+.candidate-directory-item .manifesto,.candidate-directory-item .manifesto p{color:#26384b}
+
 </style></head><body><div class="wrap"><div class="card portal-hero"><div class="commission-brand"><img class="bamssa-logo" src="/bamssa-logo.jpg" alt="BAMSSA emblem"> <span><strong>BAMSEC</strong><br>Basic Medical Sciences Student Electoral Commission</span></div><div class="hero-rule"></div><h1>BMS Faculty Election 2026</h1><p>University of Delta, Agbor</p><details class="portal-info about-bamssa"><summary>About BAMSSA</summary><div class="about-bamssa-content"><h2>About BAMSSA</h2><p>The Basic Medical Sciences Students’ Association (BAMSSA) represents students across the Basic Medical Sciences, promotes student welfare, academic growth, unity, leadership and constructive engagement with the faculty and university community.</p><p><strong>Our purpose:</strong> to encourage service, responsible leadership, collaboration and a supportive environment where students can learn, contribute and thrive.</p></div></details><details class="portal-info how-to-vote"><summary>How to Vote</summary><div class="how-to-vote-content"><h2>How to vote</h2><ol><li>Use your registered full name and matriculation number exactly as submitted to the electoral committee.</li><li>Enter the six-digit election PIN sent to your registered email address.</li><li>Tap <strong>Verify voter</strong> and wait for the ballot to load.</li><li>Read each position carefully and select your preferred candidate.</li><li>Review your selections before submitting your vote.</li><li>Submit only when you are satisfied. Do not share your PIN or allow another person to vote on your behalf.</li></ol><p class="small">If your name, matric number or email is incorrect, contact the electoral committee for verification and correction before voting. Keep your PIN private.</p></div></details><div id="msg" class="msg">Enter your registered name, matric number and personal election PIN to verify your eligibility.</div><div id="verify"><label>Full name</label><input class="verifyInput" id="name" placeholder="Enter your full name"><label>Matric number</label><input class="verifyInput" id="matric" placeholder="Enter your matric number"><label>Election PIN</label><input class="verifyInput" id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="Enter your 6 digit election PIN"><button id="verifyBtn">Verify voter</button></div><div id="publicResults" style="display:none"></div><div id="ballot" style="display:none"></div></div><footer class="admin-access-footer"><p>Election officials only</p><a href="admin.html">Login as Admin <span aria-hidden="true">↗</span></a></footer></div><script>
 const {createClient}=supabase;const db=createClient('https://dlzjnxhvcysknajtxhij.supabase.co','sb_publishable_xl4C_1obFH_6z-thh_eMBw_0M2RMHpu');
 const ELECTION='024a7a81-13dc-4fb2-adff-4851a29e0084';let voter=null,verificationToken=null,positions=[],candidates=[],current=0,selections={};
