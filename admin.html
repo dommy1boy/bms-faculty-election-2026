@@ -222,14 +222,31 @@ async function editCandidate(id){const {data:c}=await db.from('candidates').sele
 async function deleteCandidate(id){if(!confirm('Delete this candidate?'))return;const {error}=await db.from('candidates').delete().eq('id',id);if(error)alert(error.message);refresh()}
 async function loadVoters(){
   const box=document.getElementById('voterData'),count=document.getElementById('voterCount');
-  const {data,error}=await db.from('voters').select('id,full_name,d_code,department,level,email,whatsapp_number,eligible,has_voted').eq('election_id',ELECTION).order('full_name');
-  if(error){count.textContent='Unable to load voters: '+error.message;box.innerHTML='';return}
-  const {data:pinRows,error:pinError}=await db.rpc('pin_status',{p_election_id:ELECTION});
-  if(pinError){count.textContent='Unable to load PIN status: '+pinError.message;box.innerHTML='';return}
-  const pinMap=new Map((pinRows||[]).map(x=>[x.voter_id,x]));
-  window.allVoters=data||[];
+  const pageSize=1000;
+  const voterRows=[];
+  for(let from=0;;from+=pageSize){
+    const {data,error}=await db.from('voters')
+      .select('id,full_name,d_code,department,level,email,whatsapp_number,eligible,has_voted')
+      .eq('election_id',ELECTION)
+      .order('d_code').order('id')
+      .range(from,from+pageSize-1);
+    if(error){count.textContent='Unable to load voters: '+error.message;box.innerHTML='';return}
+    voterRows.push(...(data||[]));
+    if(!data||data.length<pageSize)break;
+  }
+  const pinRowsAll=[];
+  for(let from=0;;from+=pageSize){
+    const {data,error}=await db.rpc('pin_status',{p_election_id:ELECTION})
+      .order('voter_id')
+      .range(from,from+pageSize-1);
+    if(error){count.textContent='Unable to load PIN status: '+error.message;box.innerHTML='';return}
+    pinRowsAll.push(...(data||[]));
+    if(!data||data.length<pageSize)break;
+  }
+  const pinMap=new Map(pinRowsAll.map(x=>[x.voter_id,x]));
+  window.allVoters=voterRows;
   window.voterPinMap=pinMap;
-  count.textContent=data.length+' voter'+(data.length===1?'':'s')+' uploaded';
+  count.textContent=voterRows.length+' voter'+(voterRows.length===1?'':'s')+' uploaded';
   renderDepartmentSegments();updateImportLevels();updateVoterBrowsePage();
   renderVoterLists(document.getElementById('voterSearch')?.value||'');
 }
